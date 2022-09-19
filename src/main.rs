@@ -1,11 +1,7 @@
-extern crate uom;
-extern crate rppal;
-
-mod iio;
 mod io;
 mod drivers;
+mod config;
+mod apipy;
+mod controllers;
 
-fn main() {
-    loop {
-    }
-}
+fn main() {}

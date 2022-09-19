@@ -1,8 +1,8 @@
-use crate::iio::gpio::{DrivesGpio, PullMode};
+use crate::io::interface::gpio::{DrivesGpio, PullMode};
 
 pub enum MotorDirection {
-    CLOCKWISE,
-    COUNTER_CLOCKWISE
+    Clockwise,
+    CounterClockwise
 }
 
 pub trait DrivesMotor {
@@ -35,8 +35,8 @@ pub trait DrivesMotor {
 }
 
 pub struct MotorDescriptor {
-    pin_left_bcm: u8,
-    pin_right_bcm: u8
+    pub pin_left_bcm: u8,
+    pub pin_right_bcm: u8
 }
 
 pub struct MotorDriver {
@@ -45,8 +45,8 @@ pub struct MotorDriver {
 }
 
 impl MotorDriver {
-    fn new(descriptor: MotorDescriptor,
-           gpio_driver: Box<dyn DrivesGpio>) -> Self {
+    pub fn new(descriptor: MotorDescriptor,
+               gpio_driver: Box<dyn DrivesGpio>) -> Self {
         Self {
             descriptor,
             gpio_driver
@@ -77,11 +77,11 @@ impl DrivesMotor for MotorDriver {
 
     fn set_direction(&mut self, direction: MotorDirection) {
         match direction {
-            MotorDirection::COUNTER_CLOCKWISE => {
+            MotorDirection::CounterClockwise => {
                 self.gpio_driver.set(self.descriptor.pin_left_bcm);
                 self.gpio_driver.clear(self.descriptor.pin_right_bcm);
             }
-            MotorDirection::CLOCKWISE => {
+            MotorDirection::Clockwise => {
                 self.gpio_driver.set(self.descriptor.pin_right_bcm);
                 self.gpio_driver.clear(self.descriptor.pin_left_bcm);
             }

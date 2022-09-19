@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rppal = "0.13.1"
 uom = "0.33.0"
+rxrust = "0.15.0"
