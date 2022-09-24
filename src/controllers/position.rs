@@ -12,18 +12,17 @@ pub enum PositionControllerError {
 
 pub struct PositionController<'a> {
     app_state: &'a AppState,
-    left_motor_driver: MotorDriver<'a>,
+    left_motor_driver: MotorDriver,
 }
 
 impl<'a> PositionController<'a> {
     pub fn new<'b>(app_state: &'a AppState,
                    app_cfg: &AppConfig,
                    io_driver: &'b IOProvider) -> Self {
-        let gpio_driver = io_driver.gpio_driver;
         Self {
             app_state,
             left_motor_driver: MotorDriver::new(app_cfg.mot_left,
-                                                &mut gpio_driver)
+                                                io_driver.gpio_driver.clone())
         }
     }
 

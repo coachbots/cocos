@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use config::APP_CONFIG;
 use controllers::master::MasterController;
 use io::interface::IOProvider;
@@ -14,9 +17,9 @@ mod models;
 
 fn main() {
     let io_provider = IOProvider {
-        gpio_driver: Box::new(RpiGpioDriver::new()),
-        pwm_driver: Box::new(RpiPwmDriver::new()),
-        uart_driver: Box::new(RpiUartDriver::new())
+        gpio_driver: Rc::new(RefCell::new(RpiGpioDriver::new())),
+        pwm_driver: Rc::new(RefCell::new(RpiPwmDriver::new())),
+        uart_driver: Rc::new(RefCell::new(RpiUartDriver::new()))
     };
 
     let app_state: AppState = AppState::zero();

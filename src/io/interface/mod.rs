@@ -1,4 +1,5 @@
-use std::sync::RwLock;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use self::gpio::DrivesGpio;
 use self::uart::DrivesUart;
@@ -16,9 +17,9 @@ pub trait IODriver {
 }
 
 pub struct IOProvider {
-    pub gpio_driver: Box<dyn DrivesGpio>,
-    pub uart_driver: Box<dyn DrivesUart>,
-    pub pwm_driver: Box<dyn DrivesPwm>
+    pub gpio_driver: Rc<RefCell<dyn DrivesGpio>>,
+    pub uart_driver: Rc<RefCell<dyn DrivesUart>>,
+    pub pwm_driver: Rc<RefCell<dyn DrivesPwm>>
 }
 
 pub mod gpio;

@@ -1,3 +1,5 @@
+use std::{rc::Rc, cell::RefCell};
+
 use crate::io::interface::gpio::{DrivesGpio, PullMode};
 
 pub enum MotorDirection {
@@ -40,14 +42,14 @@ pub struct MotorDescriptor {
     pub pin_right_bcm: u8
 }
 
-pub struct MotorDriver<'a> {
+pub struct MotorDriver {
     descriptor: MotorDescriptor,
-    gpio_driver: &'a mut Box<dyn DrivesGpio>
+    gpio_driver: Rc<RefCell<dyn DrivesGpio>>
 }
 
-impl<'a> MotorDriver<'a> {
+impl MotorDriver {
     pub fn new(descriptor: MotorDescriptor,
-               gpio_driver: &mut Box<dyn DrivesGpio>) -> Self {
+               gpio_driver: Rc<RefCell<dyn DrivesGpio>>) -> Self {
         Self {
             descriptor,
             gpio_driver
@@ -55,21 +57,24 @@ impl<'a> MotorDriver<'a> {
     }
 
     fn init(&mut self) {
-        self.gpio_driver.set_out(self.descriptor.pin_left_bcm, PullMode::Down);
-        self.gpio_driver.set_out(self.descriptor.pin_right_bcm,
-                            PullMode::Down);
+        let mut gpio_driver = self.gpio_driver.borrow_mut();
+        gpio_driver.set_out(self.descriptor.pin_left_bcm, PullMode::Down);
+        gpio_driver.set_out(self.descriptor.pin_right_bcm,
+                       PullMode::Down);
     }
 }
 
-impl<'a> DrivesMotor for MotorDriver<'a> {
+impl DrivesMotor for MotorDriver {
     fn unblock(&mut self) {
-        self.gpio_driver.clear(self.descriptor.pin_left_bcm);
-        self.gpio_driver.clear(self.descriptor.pin_right_bcm);
+        let mut gpio_driver = self.gpio_driver.borrow_mut();
+        gpio_driver.clear(self.descriptor.pin_left_bcm);
+        gpio_driver.clear(self.descriptor.pin_right_bcm);
     }
 
     fn block(&mut self) {
-        self.gpio_driver.set(self.descriptor.pin_left_bcm);
-        self.gpio_driver.set(self.descriptor.pin_right_bcm);
+        let mut gpio_driver = self.gpio_driver.borrow_mut();
+        gpio_driver.set(self.descriptor.pin_left_bcm);
+        gpio_driver.set(self.descriptor.pin_right_bcm);
     }
 
     fn set_speed(&mut self, percent: f32) {
@@ -77,14 +82,15 @@ impl<'a> DrivesMotor for MotorDriver<'a> {
     }
 
     fn set_direction(&mut self, direction: MotorDirection) {
+        let mut gpio_driver = self.gpio_driver.borrow_mut();
         match direction {
             MotorDirection::CounterClockwise => {
-                self.gpio_driver.set(self.descriptor.pin_left_bcm);
-                self.gpio_driver.clear(self.descriptor.pin_right_bcm);
+                gpio_driver.set(self.descriptor.pin_left_bcm);
+                gpio_driver.clear(self.descriptor.pin_right_bcm);
             }
             MotorDirection::Clockwise => {
-                self.gpio_driver.set(self.descriptor.pin_right_bcm);
-                self.gpio_driver.clear(self.descriptor.pin_left_bcm);
+                gpio_driver.set(self.descriptor.pin_right_bcm);
+                gpio_driver.clear(self.descriptor.pin_left_bcm);
             }
         }
     }
