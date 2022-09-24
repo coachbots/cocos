@@ -1,4 +1,4 @@
-use super::super::interface::{IODriver, IOError};
+use super::super::interface::IOError;
 use super::super::interface::gpio::{DrivesGpio, PullMode};
 
 enum PinDirection {

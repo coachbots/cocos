@@ -1,29 +1,32 @@
-use crate::{config::AppConfig, io::interface::ProvidesIO};
+use crate::{
+    config::AppConfig,
+    io::interface::IOProvider,
+    models::app_state::AppState
+};
 
 use super::{
     api::ApiController,
-    position::PositionController,
-    peripheral::PeripheralController
+    position::PositionController
 };
 
 pub struct MasterController<'a> {
+    app_state: &'a AppState,
     position_controller: PositionController<'a>,
-    peripheral_controller: PeripheralController,
-    api_controller: ApiController,
+    api_controller: ApiController<'a>,
 }
 
 impl<'a> MasterController<'a> {
-    fn new(app_cfg: AppConfig, io_provider: Box<dyn ProvidesIO>) -> Self {
-        let peripheral_controller = PeripheralController::new(app_cfg,
-                                                              io_provider);
-        let position_controller = 
-            PositionController::new(&peripheral_controller);
-        let api_controller = ApiController::new();
+    pub fn new(app_state: &'a AppState,
+               app_cfg: &AppConfig,
+               io_provider: &IOProvider) -> Box<Self> {
+        Box::new(Self {
+            app_state,
+            position_controller: PositionController::new(app_state, app_cfg,
+                                                         io_provider),
+            api_controller: ApiController::new(app_state),
+        })
+    }
 
-        Self {
-            position_controller,
-            peripheral_controller, 
-            api_controller,
-        }
+    fn run(&mut self) {
     }
 }

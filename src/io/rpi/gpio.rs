@@ -2,20 +2,20 @@ use super::super::interface::{IODriver, IOError};
 use super::super::interface::gpio::{DrivesGpio, PullMode};
 use rppal::gpio::Gpio;
 
-struct RpiGpioDriver {
+pub struct RpiGpioDriver {
     rpi_driver: Gpio,
     initialized: bool
 }
 
 impl RpiGpioDriver {
-    fn new() -> Result<Self, IOError> {
+    pub fn new() -> Self {
         let rpi_driver = Gpio::new();
         match rpi_driver {
-            Ok(v) => Result::Ok(Self {
+            Ok(v) => Self {
                 rpi_driver: v,
                 initialized: false
-            }),
-            Err(err) => Result::Err(IOError::Unknown) // TODO: Better handling
+            },
+            Err(err) => panic!("Cannot initialize RPI Gpio Driver.")
         }
     }
 }

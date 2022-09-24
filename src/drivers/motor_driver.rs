@@ -34,19 +34,20 @@ pub trait DrivesMotor {
     fn set_direction(&mut self, direction: MotorDirection);
 }
 
+#[derive(Clone, Copy)]
 pub struct MotorDescriptor {
     pub pin_left_bcm: u8,
     pub pin_right_bcm: u8
 }
 
-pub struct MotorDriver {
+pub struct MotorDriver<'a> {
     descriptor: MotorDescriptor,
-    gpio_driver: Box<dyn DrivesGpio>
+    gpio_driver: &'a mut Box<dyn DrivesGpio>
 }
 
-impl MotorDriver {
+impl<'a> MotorDriver<'a> {
     pub fn new(descriptor: MotorDescriptor,
-               gpio_driver: Box<dyn DrivesGpio>) -> Self {
+               gpio_driver: &mut Box<dyn DrivesGpio>) -> Self {
         Self {
             descriptor,
             gpio_driver
@@ -56,11 +57,11 @@ impl MotorDriver {
     fn init(&mut self) {
         self.gpio_driver.set_out(self.descriptor.pin_left_bcm, PullMode::Down);
         self.gpio_driver.set_out(self.descriptor.pin_right_bcm,
-                                 PullMode::Down);
+                            PullMode::Down);
     }
 }
 
-impl DrivesMotor for MotorDriver {
+impl<'a> DrivesMotor for MotorDriver<'a> {
     fn unblock(&mut self) {
         self.gpio_driver.clear(self.descriptor.pin_left_bcm);
         self.gpio_driver.clear(self.descriptor.pin_right_bcm);

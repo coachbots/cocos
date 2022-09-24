@@ -1,6 +1,6 @@
 use uom::si::f32::Frequency;
 
-pub type LedColor = (f32, f32, f32);
+use crate::models::led_color::LedColor;
 
 pub trait DrivesLed {
     /// Sets the brightness of the LED.

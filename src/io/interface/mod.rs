@@ -1,3 +1,5 @@
+use std::sync::RwLock;
+
 use self::gpio::DrivesGpio;
 use self::uart::DrivesUart;
 use self::pwm::DrivesPwm;
@@ -13,10 +15,10 @@ pub trait IODriver {
     fn init(&mut self) -> Result<(), IOError>;
 }
 
-pub trait ProvidesIO {
-    fn get_gpio(&self) -> Box<dyn DrivesGpio>;
-    fn get_uart(&self) -> Box<dyn DrivesUart>;
-    fn get_pwm(&self) -> Box<dyn DrivesPwm>;
+pub struct IOProvider {
+    pub gpio_driver: Box<dyn DrivesGpio>,
+    pub uart_driver: Box<dyn DrivesUart>,
+    pub pwm_driver: Box<dyn DrivesPwm>
 }
 
 pub mod gpio;
