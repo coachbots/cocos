@@ -7,4 +7,8 @@ pub trait DrivesUart {
 
     /// Attempts to write a byte to the UART peripheral.
     fn write_byte(&self, value: u8) -> Result<(), UartError>;
+
+    fn write_bytes(&self, value: [u8]) -> Result<(), UartError>;
+
+    fn read_bytes(&self, into: &[u8]) -> Result<(), UartError>;
 }

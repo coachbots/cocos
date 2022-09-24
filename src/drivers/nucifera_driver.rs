@@ -26,6 +26,9 @@ pub struct NuciferaDriver {
     uart_driver: Rc<RefCell<dyn DrivesUart>>
 }
 
+pub struct NuciferaMessage {
+}
+
 impl IODriver for NuciferaDriver {
     fn init(&mut self) -> Result<(), IOError> {
         let mut gpio_driver = self.uart_driver.borrow_mut();
