@@ -15,7 +15,7 @@ impl RpiGpioDriver {
                 rpi_driver: v,
                 initialized: false
             },
-            Err(err) => panic!("Cannot initialize RPI Gpio Driver.")
+            Err(_err) => panic!("Cannot initialize RPI Gpio Driver.")
         }
     }
 }

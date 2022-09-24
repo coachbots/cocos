@@ -21,8 +21,8 @@ fn main() {
         pwm_driver: Rc::new(RefCell::new(RpiPwmDriver::new())),
         uart_driver: Rc::new(RefCell::new(RpiUartDriver::new()))
     };
-
     let app_state: AppState = AppState::zero();
-    let controller = MasterController::new(&app_state, &APP_CONFIG,
-                                           &io_provider);
+
+    let mut controller = MasterController::new(&app_state, &APP_CONFIG,
+                                               &io_provider);
 }

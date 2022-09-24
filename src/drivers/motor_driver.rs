@@ -1,6 +1,6 @@
 use std::{rc::Rc, cell::RefCell};
 
-use crate::io::interface::gpio::{DrivesGpio, PullMode};
+use crate::io::interface::{gpio::{DrivesGpio, PullMode}, IODriver, IOError};
 
 pub enum MotorDirection {
     Clockwise,
@@ -55,12 +55,20 @@ impl MotorDriver {
             gpio_driver
         }
     }
+}
 
-    fn init(&mut self) {
+impl IODriver for MotorDriver {
+    fn init(&mut self) -> Result<(), IOError> {
         let mut gpio_driver = self.gpio_driver.borrow_mut();
-        gpio_driver.set_out(self.descriptor.pin_left_bcm, PullMode::Down);
-        gpio_driver.set_out(self.descriptor.pin_right_bcm,
-                       PullMode::Down);
+        let l_out = gpio_driver.set_out(self.descriptor.pin_left_bcm,
+                                        PullMode::Down);
+        if l_out.is_err() { return l_out; }
+
+        let r_out = gpio_driver.set_out(self.descriptor.pin_right_bcm,
+                                        PullMode::Down);
+        if r_out.is_err() { return r_out; }
+
+        Ok(())
     }
 }
 
