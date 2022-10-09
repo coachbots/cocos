@@ -4,39 +4,19 @@ use rppal::gpio::Gpio;
 
 pub struct RpiGpioDriver {
     rpi_driver: Gpio,
-    initialized: bool
 }
 
 impl RpiGpioDriver {
     pub fn new() -> Self {
-        let rpi_driver = Gpio::new();
-        match rpi_driver {
-            Ok(v) => Self {
-                rpi_driver: v,
-                initialized: false
-            },
-            Err(_err) => panic!("Cannot initialize RPI Gpio Driver.")
+        Self {
+            rpi_driver: Gpio::new().unwrap()
         }
-    }
-}
-
-impl IODriver for RpiGpioDriver {
-    fn init(&mut self) -> Result<(), IOError> {
-        if self.initialized {
-            return Err(IOError::Reinitialization);
-        }
-
-        self.initialized = true;
-        Result::Ok(())
     }
 }
 
 impl DrivesGpio for RpiGpioDriver {
-    fn set_inp(&mut self, pin_bcm: u8,
+    fn set_inp(&self, pin_bcm: u8,
                pull_mode: PullMode) -> Result<(), IOError> {
-        if !self.initialized {
-            return Err(IOError::Uninitialized);
-        }
 
         match self.rpi_driver.get(pin_bcm) {
             Ok(p) => {
@@ -53,11 +33,8 @@ impl DrivesGpio for RpiGpioDriver {
         }
     }
 
-    fn set_out(&mut self, pin_bcm: u8,
+    fn set_out(&self, pin_bcm: u8,
                pull_mode: PullMode) -> Result<(), IOError> {
-        if !self.initialized {
-            return Err(IOError::Uninitialized);
-        }
 
         match self.rpi_driver.get(pin_bcm) {
             Ok(p) => {
@@ -74,11 +51,7 @@ impl DrivesGpio for RpiGpioDriver {
         }
     }
 
-    fn set(&mut self, pin_bcm: u8) -> Result<(), IOError> {
-        if !self.initialized {
-            return Err(IOError::Uninitialized);
-        }
-
+    fn set(&self, pin_bcm: u8) -> Result<(), IOError> {
         match self.rpi_driver.get(pin_bcm) {
             Ok(p) => {
                 p.into_output().set_high();
@@ -90,11 +63,7 @@ impl DrivesGpio for RpiGpioDriver {
         }
     }
 
-    fn clear(&mut self, pin_bcm: u8) -> Result<(), IOError> {
-        if !self.initialized {
-            return Err(IOError::Uninitialized);
-        }
-
+    fn clear(&self, pin_bcm: u8) -> Result<(), IOError> {
         match self.rpi_driver.get(pin_bcm) {
             Ok(p) => {
                 p.into_output().set_low();

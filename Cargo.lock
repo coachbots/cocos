@@ -160,6 +160,8 @@ dependencies = [
  "async-std",
  "futures",
  "futures-signals",
+ "lazy_static",
+ "log",
  "rppal",
  "uom",
 ]
