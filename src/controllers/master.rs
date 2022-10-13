@@ -5,7 +5,7 @@ use log::warn;
 use crate::{
     config::AppConfig,
     io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm},
-    drivers::nucifera_driver::NuciferaDriver
+    drivers::nucifera_driver::NuciferaDriver, models::motor_power::MotorPower
 };
 
 use super::{motor::MotorController, api::ApiController};
@@ -65,6 +65,11 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
     }
 
     fn init(&self) {
+        let gpio_driver_rc = self.gpio_driver.clone();
+        let gpio_driver = gpio_driver_rc.lock().unwrap();
+
+        self.motor_controller.block(&*gpio_driver)
+            .expect("Could not block the motor controller on start.");
     }
 
     fn spawn_tasks(&self) {
