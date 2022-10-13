@@ -5,6 +5,10 @@ pub enum MotorDirection {
     CounterClockwise
 }
 
+pub enum MotorError {
+    IOError
+}
+
 #[derive(Clone, Copy)]
 pub struct MotorDescriptor {
     pub pin_left_bcm: u8,
@@ -26,18 +30,30 @@ impl MotorDriver {
     ///
     /// It is left to the implementation to decide whether the motor will be
     /// halted upon this function call.
-    fn unblock(&self, gpio_driver: &impl DrivesGpio) {
-        gpio_driver.clear(self.descriptor.pin_left_bcm);
-        gpio_driver.clear(self.descriptor.pin_right_bcm);
+    pub fn unblock(&self,
+                   gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
+        let l_out = gpio_driver.clear(self.descriptor.pin_left_bcm);
+        if l_out.is_err() { return Err(MotorError::IOError); }
+
+        let r_out = gpio_driver.clear(self.descriptor.pin_right_bcm);
+        if r_out.is_err() { return Err(MotorError::IOError); }
+
+        Ok(())
     }
 
     /// Blocks the motor.
     ///
     /// This function must immediately halt the motor and block it from further
     /// operation.
-    fn block(&self, gpio_driver: &impl DrivesGpio) {
-        gpio_driver.set(self.descriptor.pin_left_bcm);
-        gpio_driver.set(self.descriptor.pin_right_bcm);
+    pub fn block(&self,
+                 gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
+        let l_out = gpio_driver.set(self.descriptor.pin_left_bcm);
+        if l_out.is_err() { return Err(MotorError::IOError); }
+
+        let r_out = gpio_driver.set(self.descriptor.pin_right_bcm);
+        if r_out.is_err() { return Err(MotorError::IOError); }
+
+        Ok(())
     }
 
     /// Sets the relative speed of the motor.
@@ -46,8 +62,9 @@ impl MotorDriver {
     ///
     /// * `percent` - The percentage speed of the motor. Value must be between
     ///               0 and 1.
-    pub fn set_speed(&self, percent: f32) {
+    pub fn set_speed(&self, percent: f32) -> Result<(), MotorError> {
         // TODO: Implement with PWM driver
+        Ok(())
     }
 
     /// Sets the direction of the motor.
@@ -55,28 +72,39 @@ impl MotorDriver {
     /// # Arguments
     ///
     /// * `direction` - The motor direction.
-    pub fn set_direction(&self, direction: MotorDirection,
-                         gpio_driver: &impl DrivesGpio) {
+    pub fn set_direction(
+        &self,
+        direction: MotorDirection,
+        gpio_driver: &impl DrivesGpio
+    ) -> Result<(), MotorError> {
         match direction {
             MotorDirection::CounterClockwise => {
-                gpio_driver.set(self.descriptor.pin_left_bcm);
-                gpio_driver.clear(self.descriptor.pin_right_bcm);
+                let l_out = gpio_driver.set(self.descriptor.pin_left_bcm);
+                if l_out.is_err() { return Err(MotorError::IOError); }
+
+                let r_out = gpio_driver.clear(self.descriptor.pin_right_bcm);
+                if r_out.is_err() { return Err(MotorError::IOError); }
             }
             MotorDirection::Clockwise => {
-                gpio_driver.set(self.descriptor.pin_right_bcm);
-                gpio_driver.clear(self.descriptor.pin_left_bcm);
+                let l_out = gpio_driver.set(self.descriptor.pin_right_bcm);
+                if l_out.is_err() { return Err(MotorError::IOError); }
+
+                let r_out = gpio_driver.clear(self.descriptor.pin_left_bcm);
+                if r_out.is_err() { return Err(MotorError::IOError); }
             }
         }
+        Ok(())
     }
 
-    pub fn init(&self, gpio_driver: &impl DrivesGpio) -> Result<(), IOError> {
+    pub fn init(&self,
+                gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
         let l_out = gpio_driver.set_out(self.descriptor.pin_left_bcm,
                                         PullMode::Down);
-        if l_out.is_err() { return l_out; }
+        if l_out.is_err() { return Err(MotorError::IOError); }
 
         let r_out = gpio_driver.set_out(self.descriptor.pin_right_bcm,
                                         PullMode::Down);
-        if r_out.is_err() { return r_out; }
+        if r_out.is_err() { return Err(MotorError::IOError); }
 
         Ok(())
     }

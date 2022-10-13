@@ -1,9 +1,11 @@
-use std::{thread::{self, JoinHandle}, time::{SystemTime, Duration}, sync::mpsc};
+use std::{thread::{self, JoinHandle}, time::{SystemTime, Duration}, sync::{mpsc, Arc}, rc::Rc, cell::RefCell, borrow::Borrow};
+use std::sync::Mutex;
 use log::warn;
 
 use crate::{
     config::AppConfig,
-    io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm}, drivers::nucifera_driver::NuciferaDriver, models::position::Position,
+    io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm},
+    drivers::nucifera_driver::NuciferaDriver
 };
 
 use super::{motor::MotorController, api::ApiController};
@@ -17,7 +19,7 @@ fn spawn_task<F, T>(f: F, period: Duration,
     thread::spawn(move || {
         loop {
             let start_time = SystemTime::now();
-            f();
+            // TODO: Call the function here.
             let stop_time = SystemTime::now();
             let delta = stop_time.duration_since(start_time).unwrap();
             if delta > period {
@@ -28,12 +30,12 @@ fn spawn_task<F, T>(f: F, period: Duration,
     })
 }
 
-pub struct MasterController<GpioDriver: DrivesGpio,
-                            PwmDriver: DrivesPwm,
-                            UartDriver: DrivesUart> {
-    gpio_driver: GpioDriver,
-    pwm_driver: PwmDriver,
-    uart_driver: UartDriver,
+pub struct MasterController<GpioDriver: DrivesGpio + Send + 'static,
+                            PwmDriver: DrivesPwm + Send + 'static,
+                            UartDriver: DrivesUart + Send + 'static> {
+    gpio_driver: Arc<Mutex<GpioDriver>>,
+    pwm_driver: Arc<Mutex<PwmDriver>>,
+    uart_driver: Arc<Mutex<UartDriver>>,
 
     nucifera_driver: NuciferaDriver,
 
@@ -41,17 +43,18 @@ pub struct MasterController<GpioDriver: DrivesGpio,
     api_controller: ApiController,
 }
 
-impl<GpioDriver: DrivesGpio, PwmDriver: DrivesPwm,
-     UartDriver: DrivesUart>
+impl<GpioDriver: DrivesGpio + Send + 'static,
+     PwmDriver: DrivesPwm + Send + 'static,
+     UartDriver: DrivesUart + Send + 'static>
 MasterController<GpioDriver, PwmDriver, UartDriver> {
     pub fn new(app_cfg: &AppConfig,
                gpio_driver: GpioDriver,
                pwm_driver: PwmDriver,
                uart_driver: UartDriver) -> Self {
         Self {
-            gpio_driver,
-            pwm_driver,
-            uart_driver,
+            gpio_driver: Arc::new(Mutex::new(gpio_driver)),
+            pwm_driver: Arc::new(Mutex::new(pwm_driver)),
+            uart_driver: Arc::new(Mutex::new(uart_driver)),
 
             api_controller: ApiController::new(),
 
@@ -66,28 +69,12 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
 
     fn spawn_tasks(&self) {
         // Channel definitions.
-        let (position_tx, position_rx) = mpsc::channel();
-        let (net_broadcast_tx, net_broadcast_rx) = mpsc::channel();
-        let (net_recv_tx, net_recv_rx) = mpsc::channel();
-
-        let nucifera = &self.nucifera_driver;
-        let uart_driver = &self.uart_driver;
 
         // Positioning Task
-        let task_position = spawn_task(move || {
-            let pos = nucifera.read_current_position(uart_driver);
-            position_tx.send(pos).unwrap();
-        }, Duration::from_millis(1), "1kHz Task");
-
-        // Network task.
-        let task_nettx = thread::spawn(move || {
-            let data_to_send = net_broadcast_rx.recv().unwrap();
-            // TODO: Send the data over the network.
-        });
-
-        let task_netrx = thread::spawn(move || {
-            // TODO: Wait until data received, push to channel.
-        });
+        let pos_uart_driver = Arc::clone(&self.uart_driver);
+        let positioning_task = spawn_task(move || {
+            let uart_driver = pos_uart_driver.lock().unwrap();
+        }, Duration::from_millis(1), "Positioning Task");
 
         // Idle task.
         loop { }
