@@ -1,10 +1,17 @@
 use super::super::interface::uart::{DrivesUart, UartError};
 
 #[derive(Copy, Clone)]
-pub struct UartPrintSimulator {
+pub struct PrintUartDriver {
 }
 
-impl DrivesUart for UartPrintSimulator {
+impl PrintUartDriver {
+    pub fn new() -> PrintUartDriver {
+        PrintUartDriver {
+        }
+    }
+}
+
+impl DrivesUart for PrintUartDriver {
     fn read_byte(&self) -> Result<u8, UartError> {
         println!("IO UART: Read {:?}", 0);
         Ok(0)

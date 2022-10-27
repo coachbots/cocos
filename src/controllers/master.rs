@@ -1,11 +1,14 @@
-use std::{thread::{self, JoinHandle}, time::{SystemTime, Duration}, sync::{mpsc, Arc}, rc::Rc, cell::RefCell, borrow::Borrow};
-use std::sync::Mutex;
-use log::warn;
+use std::{
+    thread::{self, JoinHandle},
+    time::{SystemTime, Duration},
+    sync::{mpsc::{self, Sender, Receiver}, Arc, Mutex}
+};
+use log;
 
 use crate::{
     config::AppConfig,
     io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm},
-    drivers::nucifera_driver::NuciferaDriver, models::motor_power::MotorPower
+    drivers::nucifera_driver::{NuciferaDriver, self}, models::position::Position
 };
 
 use super::{motor::MotorController, api::ApiController};
@@ -13,17 +16,17 @@ use super::{motor::MotorController, api::ApiController};
 fn spawn_task<F, T>(f: F, period: Duration,
                     name: &'static str) -> JoinHandle<T>
     where
-        F: FnOnce() -> T,
+        F: Fn() -> T,
         F: Send + 'static,
         T: Send + 'static {
     thread::spawn(move || {
         loop {
             let start_time = SystemTime::now();
-            // TODO: Call the function here.
+            f();
             let stop_time = SystemTime::now();
             let delta = stop_time.duration_since(start_time).unwrap();
             if delta > period {
-                warn!("{name} could not be completed in time.");
+                log::warn!("{name} could not be completed in time.");
             }
             thread::sleep(period.saturating_sub(delta));
         }
@@ -70,16 +73,38 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
 
         self.motor_controller.block(&*gpio_driver)
             .expect("Could not block the motor controller on start.");
+
+        log::debug!(target: "system.master", "Successfully initialized");
     }
 
     fn spawn_tasks(&self) {
         // Channel definitions.
+        let (tx_pos_rx_log_send, tx_pos_rx_log_recv):
+            (Sender<Position>, Receiver<Position>) = mpsc::channel();
+
+        // Logging task.
+        let logging_task = spawn_task(move || {
+            let current_pos = tx_pos_rx_log_recv.recv();
+            log::debug!(target: "system.master.position",
+                        "Measured position: {}", current_pos.unwrap())
+        }, Duration::from_millis(100), "Logging Task");
 
         // Positioning Task
         let pos_uart_driver = Arc::clone(&self.uart_driver);
+        let nucifera_driver = self.nucifera_driver;
         let positioning_task = spawn_task(move || {
             let uart_driver = pos_uart_driver.lock().unwrap();
-        }, Duration::from_millis(1), "Positioning Task");
+
+            let current_pos = nucifera_driver.read_current_position(
+                &uart_driver);
+            tx_pos_rx_log_send.send(current_pos).unwrap();
+        }, Duration::from_millis(1), "Position Input Task");
+
+        // Driving Task
+        spawn_task(move || {
+        }, Duration::from_millis(1), "Motion Output Task");
+
+        log::debug!(target: "system.master", "Spawned tasks");
 
         // Idle task.
         loop { }

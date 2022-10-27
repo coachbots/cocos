@@ -1,9 +1,16 @@
 use super::super::interface::gpio::{DrivesGpio, PullMode, GpioError};
 
-pub struct GpioPrintSimulator {
+pub struct PrintGpioDriver {
 }
 
-impl DrivesGpio for GpioPrintSimulator {
+impl PrintGpioDriver {
+    pub fn new() -> PrintGpioDriver {
+        PrintGpioDriver {
+        }
+    }
+}
+
+impl DrivesGpio for PrintGpioDriver {
     fn set(&self, pin_bcm: u8) -> Result<(), GpioError> {
         println!("IO GPIO: Set {:?} 1", pin_bcm);
         Result::Ok(())

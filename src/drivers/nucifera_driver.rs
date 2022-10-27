@@ -1,5 +1,4 @@
-use std::{rc::Rc, cell::RefCell};
-
+use std::sync::MutexGuard;
 use crate::{
     io::interface::{uart::DrivesUart, IODriver, IOError},
     models::position::Position
@@ -37,8 +36,8 @@ impl NuciferaDriver {
     /// In case Nucifera provides more than 1 position sample since the last
     /// invokation of this function, it is left to the implementation to decide
     /// on the behavior.
-    pub fn read_current_position(&self,
-                                 uart_driver: &impl DrivesUart) -> Position {
+    pub fn read_current_position<UartDriver: DrivesUart>(&self,
+                                 uart_driver: &MutexGuard<UartDriver>) -> Position {
         // TODO: Implement this
         Position::zero()
     }
