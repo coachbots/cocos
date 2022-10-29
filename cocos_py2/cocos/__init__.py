@@ -7,7 +7,6 @@ import json
 import zmq
 from enum import IntEnum
 from timeit import default_timer
-from functools import cache, cached_property
 
 
 MESSAGE_ENCODING = 'ascii'
@@ -83,26 +82,40 @@ class IPCResponse:
     def __init__(self, as_bytes):
         # type: (bytes) -> None
         self._data = as_bytes
+        self.__deserialized = None
 
-    @cached_property
+    @property
     def deserialized(self):
         # type: () -> Dict[str, Union[bytes, int, str]]
+        if self.__deserialized is not None:
+            return self.__deserialized
+
         result = json.loads(self._data)
         if result.get('status') is None:
             raise ValueError('The Response from Cocos does not contain a '
                              'status')
         result['status'] = IPCStatus(result['status'])
-        return result
+        self.__deserialized = result
+        return self.__deserialized
 
 
 class IPCResponseError(IPCResponse):
-    @cached_property
+    def __init__(self, as_bytes):
+        # type: (bytes) -> None
+        super().__init__(as_bytes)
+        self.__error_deserialized = None
+
+    @property
     def deserialized(self):
         # type: () -> Dict[str, Union[bytes, int, str]]
+        if self.__error_deserialized is not None:
+            return self.__error_deserialized
+
         parent_result = super().deserialized
         assert isinstance(parent_result['body'], bytes)
         parent_result['body'] = parent_result['body'].decode('ascii')
-        return parent_result
+        self.__error_deserialized = parent_result
+        return self.__error_deserialized
 
 
 class IPCError(Exception):
