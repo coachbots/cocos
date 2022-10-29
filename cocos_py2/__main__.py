@@ -34,7 +34,6 @@ TEST_SCRIPT = \
 """
 def usr(bot):
     while True:
-        print('setting vel')
         bot.set_vel(100, 100)
 """
 

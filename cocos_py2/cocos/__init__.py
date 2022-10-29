@@ -12,10 +12,17 @@ from timeit import default_timer
 MESSAGE_ENCODING = 'ascii'
 
 
+# For whatever reason I could not get IntEnum to behave.
+IPC_MESSAGE_TYPES = {
+    'LED': 0,
+    'VEL': 1
+}
+
+
 class IPCMessage(object):
     """A message object that can be sent over the network."""
     __metaclass__ = ABCMeta
-    __TYPE__ = 'base'
+    __TYPE__ = -1
 
     @abstractmethod
     def serialize(self):
@@ -26,13 +33,13 @@ class IPCMessage(object):
     def serialize_total(self):
         # type: () -> bytes
         return json.dumps({
-            'type': self.__class__.__TYPE__,
+            'request_type': self.__class__.__TYPE__,
             'body': self.serialize()
         }).encode(MESSAGE_ENCODING)
 
 
 class IPCSendLedMessage(IPCMessage):
-    __TYPE__ = 'led'
+    __TYPE__ = IPC_MESSAGE_TYPES['LED']
     _MINIMUM_COLOR = 0
     _MAXIMUM_COLOR = 100
 
@@ -54,7 +61,7 @@ class IPCSendLedMessage(IPCMessage):
 
 
 class IPCSendVelocityMessage(IPCMessage):
-    __TYPE__ = 'vel'
+    __TYPE__ = IPC_MESSAGE_TYPES['VEL']
     _MINIMUM_VEL = 0
     _MAXIMUM_VEL = 100
 
