@@ -4,7 +4,7 @@
 usercode.
 """
 
-from .. import cocos
+from cocos_py2 import cocos
 
 class Coachbot:
     """Represents the base Coachbot. Currently, there is no simple way to
@@ -12,20 +12,16 @@ class Coachbot:
     to the Coachbot available.
     """
 
-    def __init__(self):
-        # type: () -> None
-        self._id = -1
+    def __init__(self, communicator):
+        # type: (cocos.CocosCommunicator) -> None
+        self._id = -1  # type: int
+        self.__cocos = communicator
 
     @property
     def id(self):  # pylint: disable=invalid-name
         # type: () -> int
         """
         Facility for fetching the identification number of the current robot.
-
-        Warning:
-            For legacy reasons, this property is settable, however, you should
-            never do this! **Under no circumstance** should you be modifying
-            this variable in user code.
 
         You can use this property to return the current robot id, for example:
 
@@ -59,7 +55,7 @@ class Coachbot:
             b (int): blue value (0 - 100).
         """
         try:
-            cocos.notify_set_led((r, g, b))
+            self.__cocos.send_led((r, g, b))
         except ValueError as v_err:
             self.logger.exception(v_err)
 
@@ -72,6 +68,10 @@ class Coachbot:
             left (int): The left motor speed (-100 - 100)
             right (int): The right motor speed (-100 - 100)
         """
+        try:
+            self.__cocos.send_vel((int(left), int(right)))
+        except ValueError as v_err:
+            self.logger.exception(v_err)
 
     def get_clock(self):
         # type: () -> float
