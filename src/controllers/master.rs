@@ -91,7 +91,7 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
 
         // Positioning Task
         let pos_uart_driver = Arc::clone(&self.uart_driver);
-        let nucifera_driver = self.nucifera_driver;
+        let nucifera_driver = self.nucifera_driver; // TODO: Should be ref
         let positioning_task = spawn_task(move || {
             let uart_driver = pos_uart_driver.lock().unwrap();
 
@@ -100,7 +100,13 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
             tx_pos_rx_log_send.send(current_pos).unwrap();
         }, Duration::from_millis(1), "Position Input Task");
 
+        // API Task
+        spawn_task(move || {
+            let api_controller = ApiController::new();
+        }, Duration::from_millis(1), "API Task");
+
         // Driving Task
+        let motor_controller = self.motor_controller; // TODO: Should be ref
         spawn_task(move || {
         }, Duration::from_millis(1), "Motion Output Task");
 

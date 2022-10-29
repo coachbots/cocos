@@ -15,6 +15,7 @@ pub struct MotorDescriptor {
     pub pin_right_bcm: u8
 }
 
+#[derive(Clone, Copy)]
 pub struct MotorDriver {
     descriptor: MotorDescriptor,
 }

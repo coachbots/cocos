@@ -7,6 +7,7 @@ pub enum MotorControllerError {
     IOError
 }
 
+#[derive(Clone, Copy)]
 pub struct MotorController {
     left_motor_driver: MotorDriver,
     right_motor_driver: MotorDriver,
