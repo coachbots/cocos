@@ -66,6 +66,16 @@ impl ApiMessager {
         }
     }
 
+    /// Immediately stops the messager, closing any open sockets.
+    pub fn stop(&mut self) {
+        match &mut self.socket {
+            None => {}
+            Some(sock) => {
+                self.socket = Option::None;
+            }
+        }
+    }
+
     /// A function that must be hooked into a looped task, reading a message,
     /// parsing it and emitting the requested instruction into the appropriate
     /// channel.
@@ -198,7 +208,6 @@ impl ApiMessager {
                                             Are you trying something funny?"
                                             .to_string()
                                     }
-                                ).unwrap()
                             }).unwrap();
                             match self.send_response(response) {
                                 Ok(()) => {

@@ -59,7 +59,7 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
             pwm_driver: Arc::new(Mutex::new(pwm_driver)),
             uart_driver: Arc::new(Mutex::new(uart_driver)),
 
-            api_controller: ApiController::new(),
+            api_controller: ApiController::new("ipc:///tmp/cocos-api"),
 
             nucifera_driver: NuciferaDriver::new(app_cfg.nucifera),
             motor_controller: MotorController::new(app_cfg.mot_left,
@@ -102,7 +102,7 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
 
         // API Task
         spawn_task(move || {
-            let api_controller = ApiController::new();
+            // TODO
         }, Duration::from_millis(1), "API Task");
 
         // Driving Task
