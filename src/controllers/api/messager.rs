@@ -251,42 +251,46 @@ impl ApiMessager {
         }
     }
 
+    fn validate_and_handle_body<'a, BodyType>(
+        &mut self,
+        request: &'a ApiIpcRequest,
+        handler: &mut dyn FnMut(&mut Self, BodyType)
+            -> (ApiResponse, ApiTickOutputMessage)
+    ) -> Result<ApiTickOutputMessage, ApiError>
+        where BodyType: Deserialize<'a> + ValidatesApiIpcBody {
+        // Validate body
+        let body: Result<BodyType, ApiError> =
+            self.validate_body(&request.body.as_str());
+        match body {
+            Ok(valid_body) => {
+                // Call the appropriate handler if the body is valid.
+                let (response, state) = handler(self, valid_body);
+                if let Err(e) = self.send_response(
+                        serde_json::to_string(&response).unwrap()) {
+                    return Err(e);
+                }
+                return Ok(state);
+            }
+            Err(error) => { return Err(error); }
+        }
+    }
+
+    /// Handles an arbitrary IPC request.
+    ///
+    /// In this function, if you wish to handle another IPC request, you must
+    /// add a match-case block for the appropriate 
     fn handle_request(
         &mut self,
         request: &ApiIpcRequest
     ) -> Result<ApiTickOutputMessage, ApiError> {
         match request.request_type {
             ApiIpcRequestType::Led => {
-                let body: Result<ApiIpcLedRequestBody, ApiError> =
-                    self.validate_body(request.body.as_str());
-                match body {
-                    Ok(valid_body) => {
-                        let (response, state) =
-                            self.handle_led_request(valid_body);
-                        if let Err(e) = self.send_response(
-                            serde_json::to_string(&response).unwrap()) {
-                            return Err(e);
-                        }
-                        return Ok(state);
-                    }
-                    Err(error) => { return Err(error); }
-                }
+                self.validate_and_handle_body(request,
+                                              &mut Self::handle_led_request)
             }
             ApiIpcRequestType::Vel => {
-                let body: Result<ApiIpcVelRequestBody, ApiError> =
-                    self.validate_body(request.body.as_str());
-                match body {
-                    Ok(valid_body) => {
-                        let (response, state) =
-                            self.handle_vel_request(valid_body);
-                        if let Err(e) = self.send_response(
-                            serde_json::to_string(&response).unwrap()) {
-                            return Err(e);
-                        }
-                        return Ok(state);
-                    }
-                    Err(error) => { return Err(error); }
-                }
+                self.validate_and_handle_body(request,
+                                              &mut Self::handle_vel_request)
             }
         }
     }
@@ -295,7 +299,7 @@ impl ApiMessager {
         match &self.socket {
             None => { Err(ApiError::SockNotReady) }
             Some(sock) => {
-                match sock.send_str(response.as_str(), 0) {
+                match sock.send_str(response.as_str(), 1) {
                     Ok(()) => { Ok(()) }
                     Err(err) => { Err(ApiError::ZMQError(err)) }
                 }
