@@ -8,7 +8,8 @@ use log;
 use crate::{
     config::AppConfig,
     io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm},
-    drivers::nucifera_driver::{NuciferaDriver, self}, models::position::Position
+    drivers::nucifera_driver::NuciferaDriver,
+    models::{position::Position, api::ApiTickMessage}, controllers::api
 };
 
 use super::{motor::MotorController, api::ApiController};
@@ -43,7 +44,8 @@ pub struct MasterController<GpioDriver: DrivesGpio + Send + 'static,
     nucifera_driver: NuciferaDriver,
 
     motor_controller: MotorController,
-    api_controller: ApiController,
+    // TODO: Does not need to be a mutex
+    api_controller: Arc<Mutex<ApiController>>,
 }
 
 impl<GpioDriver: DrivesGpio + Send + 'static,
@@ -59,7 +61,8 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
             pwm_driver: Arc::new(Mutex::new(pwm_driver)),
             uart_driver: Arc::new(Mutex::new(uart_driver)),
 
-            api_controller: ApiController::new("ipc:///tmp/cocos-api"),
+            api_controller: Arc::new(
+                Mutex::new(ApiController::new("ipc:///tmp/cocos-api"))),
 
             nucifera_driver: NuciferaDriver::new(app_cfg.nucifera),
             motor_controller: MotorController::new(app_cfg.mot_left,
@@ -74,6 +77,9 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
         self.motor_controller.block(&*gpio_driver)
             .expect("Could not block the motor controller on start.");
 
+        self.api_controller.lock().unwrap().restart_api()
+            .expect("Could not spawn the child process.");
+
         log::debug!(target: "system.master", "Successfully initialized");
     }
 
@@ -81,6 +87,7 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
         // Channel definitions.
         let (tx_pos_rx_log_send, tx_pos_rx_log_recv):
             (Sender<Position>, Receiver<Position>) = mpsc::channel();
+        let (tx_pos_rx_api_send, tx_pos_rx_api_recv) = mpsc::channel();
 
         // Logging task.
         let logging_task = spawn_task(move || {
@@ -98,11 +105,17 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
             let current_pos = nucifera_driver.read_current_position(
                 &uart_driver);
             tx_pos_rx_log_send.send(current_pos).unwrap();
+            tx_pos_rx_log_send.send(current_pos).unwrap();
         }, Duration::from_millis(1), "Position Input Task");
 
         // API Task
-        spawn_task(move || {
-            // TODO
+        let api_controller = Arc::clone(&self.api_controller);
+        let api_task = spawn_task(move || {
+            let tick_data = ApiTickMessage {
+                // TODO: Dangerous unwrap
+                bot_pos: tx_pos_rx_api_recv.recv().unwrap()
+            };
+            api_controller.lock().unwrap().run_tick(tick_data);
         }, Duration::from_millis(1), "API Task");
 
         // Driving Task
@@ -113,7 +126,9 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
         log::debug!(target: "system.master", "Spawned tasks");
 
         // Idle task.
-        loop { }
+        loop {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 
     pub fn run(&self) {

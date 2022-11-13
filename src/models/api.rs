@@ -1,3 +1,5 @@
+use super::position::Position;
+
 pub trait IsApiInstructionArg {
     fn validate(&self) -> bool;
 }
@@ -33,4 +35,10 @@ impl IsApiInstructionArg for ApiSetLedArgs {
 pub struct ApiCommand {
     instruction: ApiInstruction,
     args: ApiSetLedArgs
+}
+
+/// Represents data that is fed into the python api.
+pub struct ApiTickMessage {
+    /// The current bot position emitted to the API.
+    pub bot_pos: Position
 }

@@ -22,6 +22,7 @@ class App:
     def populate_script(self, script):
         # type: (str) -> None
         self.run_script = USER_CODE_TEMPLATE.format(user_script=script)
+        print('Setting script')
 
     def run(self):
         # type: () -> None

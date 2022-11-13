@@ -30,7 +30,7 @@ pub trait ValidatesApiIpcBody {
 #[derive(Deserialize, Debug)]
 /// Represents a body for the [ApiIpcRequestType.Led] request type. The fields
 /// here contain the RGB values for the LED.
-pub struct ApiIpcLedRequestBody { r: u8, g: u8, b: u8 }
+pub struct ApiIpcLedRequestBody { pub r: u8, pub g: u8, pub b: u8 }
 
 impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
     fn validate(&self) -> bool {
@@ -44,7 +44,7 @@ impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
 #[derive(Deserialize, Debug)]
 /// Represents a velocity request body for [ApiIpcRequestType.Vel] request. The
 /// fields represent the left and right motor powers.
-pub struct ApiIpcVelRequestBody { l: i8, r: i8 }
+pub struct ApiIpcVelRequestBody { pub l: i8, pub r: i8 }
 
 impl ValidatesApiIpcBody for ApiIpcVelRequestBody {
     fn validate(&self) -> bool {

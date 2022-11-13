@@ -18,14 +18,17 @@ pub enum ApiStatus {
 /// Represents a response that is sent to the API. This structure wraps header
 /// values and the body.
 pub struct ApiResponse {
-    status: ApiStatus,
-    body: String
+    /// The response error code to the given request.
+    pub status: ApiStatus,
+
+    /// The body of the error code.
+    pub body: String
 }
 
 #[derive(Serialize)]
 /// Represents a body returned upon an error.
 pub struct ApiIpcErrorResponseBody {
-    message: String
+    pub message: String
 }
 
 #[derive(Serialize)]

@@ -3,9 +3,6 @@ extern crate lazy_static;
 
 use config::APP_CONFIG;
 use controllers::master::MasterController;
-use io::rpi::gpio::RpiGpioDriver;
-use io::rpi::pwm::RpiPwmDriver;
-use io::rpi::uart::RpiUartDriver;
 use io::sim_print::{
     gpio::PrintGpioDriver,
     uart::PrintUartDriver,
@@ -20,15 +17,6 @@ pub mod controllers;
 pub mod models;
 
 lazy_static! {
-    //static ref MASTER_CONTROLLER: MasterController <RpiGpioDriver,
-    //                                                RpiPwmDriver,
-    //                                                RpiUartDriver> =
-    //MasterController::new(
-    //    &APP_CONFIG,
-    //    RpiGpioDriver::new(),
-    //    RpiPwmDriver::new(),
-    //    RpiUartDriver::new()
-    //);
     static ref MASTER_CONTROLLER: MasterController<PrintGpioDriver,
                                                    PrintPwmDriver,
                                                    PrintUartDriver> =

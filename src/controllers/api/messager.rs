@@ -1,3 +1,5 @@
+use log::debug;
+use serde::Deserialize;
 /// This module exposes the [ApiMessager] class which is responsible for
 /// communication with the API.
 
@@ -25,7 +27,7 @@ use super::ipc_responses::{
 /// parsing requests and giving responses.
 pub struct ApiMessager {
     /// The UNIX file used for IPC communication.
-    comm_file: &'static str,
+    pub comm_file: &'static str,
 
     /// The zmq context used for communication.
     context: zmq::Context,
@@ -96,8 +98,8 @@ impl ApiMessager {
                     return Err(ApiError::ZMQError(err));
                 }
                 let message = message_res.unwrap();
-                log::debug!(target: "api.messager",
-                            "Received rawmessage: {:?}", message);
+                log::debug!(target: "system.api.messager",
+                            "Received raw message: {:?}", message);
 
                 // Ensure the data received is valid UTF-8.
                 if message.as_str().is_none() {
@@ -139,111 +141,114 @@ impl ApiMessager {
         }
     }
 
+    fn handle_led_request(&mut self,
+                          request: ApiIpcLedRequestBody) -> ApiResponse {
+        // TODO: Emit to data channel
+        debug!(target: "system.api.request",
+               "Received LED request {:?}", request);
+        ApiResponse {
+            status: ApiStatus::Success,
+            body: serde_json::to_string(
+                &ApiIpcLedResponseBody {}).unwrap()
+        }
+    }
+
+    fn handle_vel_request(&mut self,
+                          request: ApiIpcVelRequestBody) -> ApiResponse {
+        debug!(target: "system.api.request",
+               "Received velocity request {:?}", request);
+        ApiResponse {
+            status: ApiStatus::Success,
+            body: serde_json::to_string(
+                &ApiIpcVelResponseBody {}).unwrap()
+        }
+    }
+
+    /// This function is responsible for validating IPCRequestBody's.
+    fn validate_body<'a, RequestBodyType>(
+        &mut self,
+        body_str: &'a str)
+    -> Result<RequestBodyType, ApiError>
+        where RequestBodyType: Deserialize<'a> + ValidatesApiIpcBody {
+
+        // Parse the body, failing on error.
+        let body_opt: Result<RequestBodyType, serde_json::Error> =
+            serde_json::from_str(body_str);
+
+        match body_opt {
+            Ok(valid_body) => {
+                // If the body is successfully parsed, we must
+                // valiate it's arguments.
+                if !valid_body.validate() {
+                    let response = serde_json::to_string(&ApiResponse {
+                        status: ApiStatus::InvalidRequestArgs,
+                        body: serde_json::to_string(
+                            &ApiIpcErrorResponseBody {
+                                message: "The body params are invalid.
+                                    Are you trying something funny?"
+                                    .to_string()
+                            }
+                        ).unwrap()
+                    }).unwrap();
+                    match self.send_response(response) {
+                        Ok(()) => {
+                            return Err(ApiError::InvalidRequestBody);
+                        }
+                        Err(err) => { return Err(err); }
+                    }
+                }
+
+                // If all is well, let us emit the body.
+                Ok(valid_body)
+            }
+            Err(error) => {
+                // If we did not successfully parse the body, let us notify the
+                // API.
+                let response = serde_json::to_string(&ApiResponse {
+                    status: ApiStatus::InvalidRequestBody,
+                    body: serde_json::to_string(
+                        &ApiIpcErrorResponseBody {
+                            message: "The body is invalid. Are you
+                                trying something funny?".to_string()
+                        }
+                    ).unwrap()
+                }).unwrap();
+                match self.send_response(response) {
+                    Ok(()) => {
+                        return Err(ApiError::InvalidRequestBody);
+                    }
+                    Err(err) => { return Err(err); }
+                }
+            }
+        }
+    }
+
     fn handle_request(&mut self,
                       request: &ApiIpcRequest) -> Result<(), ApiError> {
         match request.request_type {
             ApiIpcRequestType::Led => {
-                // Parse the body, failing on error.
-                let body_opt: Result<ApiIpcLedRequestBody, serde_json::Error> =
-                    serde_json::from_str(request.body.as_str());
-                match body_opt {
-                    Ok(request) => {
-                        if !request.validate() {
-                            let response = serde_json::to_string(&ApiResponse {
-                                status: ApiStatus::InvalidRequestArgs,
-                                body: serde_json::to_string(
-                                    &ApiIpcErrorResponseBody {
-                                        message: "The body params are invalid.
-                                            Are you trying something funny?"
-                                            .to_string()
-                                    }
-                                ).unwrap()
-                            }).unwrap();
-                            match self.send_response(response) {
-                                Ok(()) => {
-                                    return Err(ApiError::InvalidRequestBody);
-                                }
-                                Err(err) => { return Err(err); }
-                            }
-                        }
-                        // TODO: Push notification to other controllers.
-                        let response = serde_json::to_string(&ApiResponse {
-                            status: ApiStatus::Success,
-                            body: serde_json::to_string(
-                                &ApiIpcLedResponseBody {}).unwrap()
-                        }).unwrap();
-                        return self.send_response(response);
+                let body: Result<ApiIpcLedRequestBody, ApiError> =
+                    self.validate_body(request.body.as_str());
+                match body {
+                    Ok(valid_body) => {
+                        let response = self.handle_led_request(valid_body);
+                        self.send_response(
+                            serde_json::to_string(&response).unwrap())
                     }
-                    Err(error) => {
-                        let response = serde_json::to_string(&ApiResponse {
-                            status: ApiStatus::InvalidRequestBody,
-                            body: serde_json::to_string(
-                                &ApiIpcErrorResponseBody {
-                                    message: "The body is invalid. Are you
-                                        trying something funny?".to_string()
-                                }
-                            ).unwrap()
-                        }).unwrap();
-                        match self.send_response(response) {
-                            Ok(()) => {
-                                return Err(ApiError::InvalidRequestBody);
-                            }
-                            Err(err) => { return Err(err); }
-                        }
-                    }
+                    Err(error) => { return Err(error); }
                 }
             }
             ApiIpcRequestType::Vel => {
-                // Parse the body, failing on error.
-                let body_opt: Result<ApiIpcVelRequestBody, serde_json::Error> =
-                    serde_json::from_str(request.body.as_str());
-                match body_opt {
-                    Ok(request) => {
-                        if !request.validate() {
-                            let response = serde_json::to_string(&ApiResponse {
-                                status: ApiStatus::InvalidRequestArgs,
-                                body: serde_json::to_string(
-                                    &ApiIpcErrorResponseBody {
-                                        message: "The body params are invalid.
-                                            Are you trying something funny?"
-                                            .to_string()
-                                    }
-                            }).unwrap();
-                            match self.send_response(response) {
-                                Ok(()) => {
-                                    return Err(ApiError::InvalidRequestBody);
-                                }
-                                Err(err) => { return Err(err); }
-                            }
-                        }
-                        // TODO: Push notification to other controllers.
-                        let response = serde_json::to_string(&ApiResponse {
-                            status: ApiStatus::Success,
-                            body: serde_json::to_string(
-                                &ApiIpcVelResponseBody {}).unwrap()
-                        }).unwrap();
-                        return self.send_response(response);
-                        
+                let body: Result<ApiIpcVelRequestBody, ApiError> =
+                    self.validate_body(request.body.as_str());
+                match body {
+                    Ok(valid_body) => {
+                        let response = self.handle_vel_request(valid_body);
+                        self.send_response(
+                            serde_json::to_string(&response).unwrap())
                     }
-                    Err(error) => {
-                        let response = serde_json::to_string(&ApiResponse {
-                            status: ApiStatus::InvalidRequestBody,
-                            body: serde_json::to_string(
-                                &ApiIpcErrorResponseBody {
-                                    message: "The body is invalid. Are you
-                                        trying something funny?".to_string()
-                                }
-                            ).unwrap()
-                        }).unwrap();
-                        match self.send_response(response) {
-                            Ok(()) => {
-                                return Err(ApiError::InvalidRequestBody);
-                            }
-                            Err(err) => { return Err(err); }
-                        }
-                    }
+                    Err(error) => { return Err(error); }
                 }
-
             }
         }
     }

@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function
 from abc import abstractmethod, ABCMeta
-from typing import ByteString, Tuple, Dict, Union
+#from typing import ByteString, Tuple, Dict, Union
 import json
 import zmq
 from enum import IntEnum
