@@ -8,8 +8,12 @@ use serde_repr::Deserialize_repr;
 #[repr(u16)]
 /// Represents a request type that the API can make.
 pub enum ApiIpcRequestType {
+    /// Represents an LED change request.
     Led = 0,
-    Vel = 1
+    /// Represents a velocity change request.
+    Vel = 1,
+    /// Represents a position read request.
+    Pos = 2,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,7 +46,7 @@ impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
 }
 
 #[derive(Deserialize, Debug)]
-/// Represents a velocity request body for [ApiIpcRequestType.Vel] request. The
+/// Represents a velocity request body for [ApiIpcRequestType::Vel]. The
 /// fields represent the left and right motor powers.
 pub struct ApiIpcVelRequestBody { pub l: i8, pub r: i8 }
 
@@ -52,4 +56,12 @@ impl ValidatesApiIpcBody for ApiIpcVelRequestBody {
         return valid_range.contains(&self.l)
             && valid_range.contains(&self.r);
     }
+}
+
+#[derive(Deserialize, Debug)]
+/// Represents a request body for [ApiIpcPosRequestType::Pos].
+pub struct ApiIpcPosRequestBody {}
+
+impl ValidatesApiIpcBody for ApiIpcPosRequestBody {
+    fn validate(&self) -> bool { return true; }
 }

@@ -1,15 +1,15 @@
 use std::{
     thread::{self, JoinHandle},
     time::{SystemTime, Duration},
-    sync::{mpsc::{self, Sender, Receiver}, Arc, Mutex}
+    sync::{Arc, Mutex}
 };
 use log;
 
 use crate::{
     config::AppConfig,
     io::interface::{uart::DrivesUart, gpio::DrivesGpio, pwm::DrivesPwm},
-    drivers::{nucifera_driver::NuciferaDriver, led_driver::{LedDriver, self}},
-    models::{position::Position, api::ApiTickMessage, motor_power::MotorPower, led_color::LedColor}, controllers::api
+    drivers::{nucifera_driver::NuciferaDriver, led_driver::LedDriver},
+    models::{position::Position, motor_power::MotorPower, led_color::LedColor, api::ApiTickInputMessage}
 };
 
 use super::{motor::MotorController, api::ApiController};
@@ -139,7 +139,7 @@ MasterController<GpioDriver, PwmDriver, UartDriver> {
         let current_mot_pow = Arc::clone(&self.current_mot_pow);
         let api_task = spawn_task(move || {
             let pos = current_pos.lock().unwrap().clone();
-            let tick_data = ApiTickMessage {
+            let tick_data = ApiTickInputMessage {
                 bot_pos: pos
             };
             match api_controller.lock().unwrap().run_tick(tick_data) {

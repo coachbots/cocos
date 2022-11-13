@@ -38,3 +38,7 @@ pub struct ApiIpcLedResponseBody {}
 #[derive(Serialize)]
 /// Represents a body returned upon successful velocity setting.
 pub struct ApiIpcVelResponseBody {}
+
+#[derive(Serialize)]
+/// Represents a body returned upon a position query.
+pub struct ApiIpcPosResponseBody { pub x: f32, pub y: f32, pub theta: f32 }

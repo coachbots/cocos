@@ -6,8 +6,8 @@ use serde::Deserialize;
 /// communication with the API.
 
 use zmq;
-use crate::controllers::api::ipc_responses::ApiIpcErrorResponseBody;
-use crate::models::api::ApiTickOutputMessage;
+use crate::controllers::api::ipc_responses::{ApiIpcErrorResponseBody, ApiIpcPosResponseBody};
+use crate::models::api::{ApiTickOutputMessage, ApiTickInputMessage};
 use crate::models::led_color::LedColor;
 use crate::models::motor_power::MotorPower;
 
@@ -17,7 +17,7 @@ use super::ipc_requests::{
     ApiIpcRequest,
     ApiIpcLedRequestBody,
     ApiIpcVelRequestBody,
-    ValidatesApiIpcBody
+    ValidatesApiIpcBody, ApiIpcPosRequestBody
 };
 use super::ipc_responses::{
     ApiStatus,
@@ -93,7 +93,8 @@ impl ApiMessager {
     ///
     /// [ApiError::DecodeError] is raised when the bytes could not be decoded,
     /// however, the API is notified via an [ApiStatus::InvalidEncoding].
-    pub fn run_tick(&mut self) -> Result<ApiTickOutputMessage, ApiError> {
+    pub fn run_tick(&mut self,
+                    data: ApiTickInputMessage) -> Result<ApiTickOutputMessage, ApiError> {
         match &self.socket {
             None => { Err(ApiError::SockNotReady) }
             Some(sock) => {
@@ -143,52 +144,131 @@ impl ApiMessager {
                     }
                 }
                 let request = req_opt.unwrap();
-                self.handle_request(&request)
+                self.handle_request(&request, &data)
             }
         }
     }
 
     fn handle_led_request(
         &mut self,
-        request: ApiIpcLedRequestBody
+        request: ApiIpcLedRequestBody,
+        input_data: &ApiTickInputMessage
     ) -> (ApiResponse, ApiTickOutputMessage) {
         // TODO: Emit to data channel
         debug!(target: "system.api.request",
                "Received LED request {:?}", request);
         (ApiResponse {
             status: ApiStatus::Success,
-            body: serde_json::to_string(
-                &ApiIpcLedResponseBody {}).unwrap()
-        }, ApiTickOutputMessage {
-            request_motor_power: None,
-            request_led_color: Option::Some(
-                LedColor::new(
-                    request.r as f32 / 255f32,
-                    request.g as f32 / 255f32,
-                    request.b as f32 / 255f32
-                ).unwrap()
-            )
-        })
+            body: serde_json::to_string(&ApiIpcLedResponseBody {}).unwrap()
+        }, ApiTickOutputMessage::led(LedColor::new(
+            request.r as f32 / 255f32,
+            request.g as f32 / 255f32,
+            request.b as f32 / 255f32
+        ).unwrap()))
     }
 
     fn handle_vel_request(
         &mut self,
-        request: ApiIpcVelRequestBody
+        request: ApiIpcVelRequestBody,
+        input_data: &ApiTickInputMessage
     ) -> (ApiResponse, ApiTickOutputMessage) {
         debug!(target: "system.api.request",
                "Received velocity request {:?}", request);
         (ApiResponse {
             status: ApiStatus::Success,
-            body: serde_json::to_string(
-                &ApiIpcVelResponseBody {}).unwrap()
-        }, ApiTickOutputMessage {
-            request_motor_power: Some(
-                MotorPower::new(
-                    request.l as f32 / 100f32,
-                    request.r as f32 / 100f32,
-                    false).unwrap()),
-            request_led_color: None
-        })
+            body: serde_json::to_string(&ApiIpcVelResponseBody {}).unwrap()
+        }, ApiTickOutputMessage::motor(MotorPower::new(
+            request.l as f32 / 100f32,
+            request.r as f32 / 100f32,
+            false
+        ).unwrap()))
+    }
+
+    fn handle_pos_request(
+        &mut self,
+        request: ApiIpcPosRequestBody,
+        input_data: &ApiTickInputMessage
+    ) -> (ApiResponse, ApiTickOutputMessage) {
+        debug!(target: "system.api.request",
+               "Received position request {:?}.", request);
+        (ApiResponse {
+            status: ApiStatus::Success,
+            body: serde_json::to_string(&ApiIpcPosResponseBody {
+                x: input_data.bot_pos.x.value,
+                y: input_data.bot_pos.y.value,
+                theta: input_data.bot_pos.theta.value
+            }).unwrap()
+        }, ApiTickOutputMessage::none())
+    }
+
+    /// Handles an arbitrary IPC request.
+    ///
+    /// In this function, if you wish to handle another IPC request, you must
+    /// add a match-case block for the appropriate request type.
+    fn handle_request(
+        &mut self,
+        request: &ApiIpcRequest,
+        input_data: &ApiTickInputMessage
+    ) -> Result<ApiTickOutputMessage, ApiError> {
+        match request.request_type {
+            ApiIpcRequestType::Led => {
+                self.validate_and_handle_body(request,
+                                              &mut Self::handle_led_request,
+                                              input_data)
+            }
+            ApiIpcRequestType::Vel => {
+                self.validate_and_handle_body(request,
+                                              &mut Self::handle_vel_request,
+                                              input_data)
+            }
+            ApiIpcRequestType::Pos => {
+                self.validate_and_handle_body(request,
+                                              &mut Self::handle_pos_request,
+                                              input_data)
+            }
+        }
+    }
+
+    /// This function validates an ApiIpcRequestBody assuming that the request
+    /// headers are correct. Then, it calls the appropriate handler that is
+    /// injected via the generic.
+    fn validate_and_handle_body<'a, BodyType>(
+        &mut self,
+        request: &'a ApiIpcRequest,
+        handler: &mut dyn FnMut(&mut Self,
+                                BodyType,
+                                &ApiTickInputMessage) -> (ApiResponse, ApiTickOutputMessage),
+        input_data: &ApiTickInputMessage
+    ) -> Result<ApiTickOutputMessage, ApiError>
+        where BodyType: Deserialize<'a> + ValidatesApiIpcBody {
+        // Validate body
+        let body: Result<BodyType, ApiError> =
+            self.validate_body(&request.body.as_str());
+        match body {
+            Ok(valid_body) => {
+                // Call the appropriate handler if the body is valid.
+                let (response, state) = handler(self, valid_body, input_data);
+                if let Err(e) = self.send_response(
+                        serde_json::to_string(&response).unwrap()) {
+                    return Err(e);
+                }
+                return Ok(state);
+            }
+            Err(error) => { return Err(error); }
+        }
+    }
+
+    /// Sends a response to the last request.
+    fn send_response(&mut self, response: String) -> Result<(), ApiError> {
+        match &self.socket {
+            None => { Err(ApiError::SockNotReady) }
+            Some(sock) => {
+                match sock.send_str(response.as_str(), 1) {
+                    Ok(()) => { Ok(()) }
+                    Err(err) => { Err(ApiError::ZMQError(err)) }
+                }
+            }
+        }
     }
 
     /// This function is responsible for validating IPCRequestBody's.
@@ -246,62 +326,6 @@ impl ApiMessager {
                         return Err(ApiError::InvalidRequestBody);
                     }
                     Err(err) => { return Err(err); }
-                }
-            }
-        }
-    }
-
-    fn validate_and_handle_body<'a, BodyType>(
-        &mut self,
-        request: &'a ApiIpcRequest,
-        handler: &mut dyn FnMut(&mut Self, BodyType)
-            -> (ApiResponse, ApiTickOutputMessage)
-    ) -> Result<ApiTickOutputMessage, ApiError>
-        where BodyType: Deserialize<'a> + ValidatesApiIpcBody {
-        // Validate body
-        let body: Result<BodyType, ApiError> =
-            self.validate_body(&request.body.as_str());
-        match body {
-            Ok(valid_body) => {
-                // Call the appropriate handler if the body is valid.
-                let (response, state) = handler(self, valid_body);
-                if let Err(e) = self.send_response(
-                        serde_json::to_string(&response).unwrap()) {
-                    return Err(e);
-                }
-                return Ok(state);
-            }
-            Err(error) => { return Err(error); }
-        }
-    }
-
-    /// Handles an arbitrary IPC request.
-    ///
-    /// In this function, if you wish to handle another IPC request, you must
-    /// add a match-case block for the appropriate 
-    fn handle_request(
-        &mut self,
-        request: &ApiIpcRequest
-    ) -> Result<ApiTickOutputMessage, ApiError> {
-        match request.request_type {
-            ApiIpcRequestType::Led => {
-                self.validate_and_handle_body(request,
-                                              &mut Self::handle_led_request)
-            }
-            ApiIpcRequestType::Vel => {
-                self.validate_and_handle_body(request,
-                                              &mut Self::handle_vel_request)
-            }
-        }
-    }
-
-    fn send_response(&mut self, response: String) -> Result<(), ApiError> {
-        match &self.socket {
-            None => { Err(ApiError::SockNotReady) }
-            Some(sock) => {
-                match sock.send_str(response.as_str(), 1) {
-                    Ok(()) => { Ok(()) }
-                    Err(err) => { Err(ApiError::ZMQError(err)) }
                 }
             }
         }
