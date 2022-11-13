@@ -5,6 +5,7 @@ usercode.
 """
 
 from cocos_py2 import cocos
+import logging
 
 class Coachbot:
     """Represents the base Coachbot. Currently, there is no simple way to
@@ -16,6 +17,7 @@ class Coachbot:
         # type: (cocos.CocosCommunicator) -> None
         self._id = -1  # type: int
         self.__cocos = communicator
+        logging.basicConfig()  # TODO: Remove and replace with IPC logging
 
     @property
     def id(self):  # pylint: disable=invalid-name
@@ -34,6 +36,10 @@ class Coachbot:
             int: The id number of self.
         """
         return self._id
+
+    @property
+    def logger(self):
+        return logging.getLogger('api.v1.user')
 
     @id.setter
     def id(self, new):  # pylint: disable=invalid-name

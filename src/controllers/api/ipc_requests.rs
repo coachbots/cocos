@@ -34,7 +34,7 @@ pub struct ApiIpcLedRequestBody { pub r: u8, pub g: u8, pub b: u8 }
 
 impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
     fn validate(&self) -> bool {
-        let valid_range = 0..255;
+        let valid_range = 0..=255;
         return valid_range.contains(&self.r)
             && valid_range.contains(&self.g)
             && valid_range.contains(&self.b);
@@ -48,7 +48,7 @@ pub struct ApiIpcVelRequestBody { pub l: i8, pub r: i8 }
 
 impl ValidatesApiIpcBody for ApiIpcVelRequestBody {
     fn validate(&self) -> bool {
-        let valid_range = -100..100;
+        let valid_range = -100..=100;
         return valid_range.contains(&self.l)
             && valid_range.contains(&self.r);
     }

@@ -14,7 +14,7 @@ impl RpiGpioDriver {
 }
 
 impl DrivesGpio for RpiGpioDriver {
-    fn set_inp(&self, pin_bcm: u8,
+    fn set_inp(&mut self, pin_bcm: u8,
                pull_mode: PullMode) -> Result<(), GpioError> {
         let pin = self.rpi_driver.get(pin_bcm);
         if pin.is_err() && matches!(pin.err().unwrap(), Error::Io(pin)) {
@@ -31,7 +31,7 @@ impl DrivesGpio for RpiGpioDriver {
         Ok(())
     }
 
-    fn set_out(&self, pin_bcm: u8,
+    fn set_out(&mut self, pin_bcm: u8,
                pull_mode: PullMode) -> Result<(), GpioError> {
         let p = self.rpi_driver.get(pin_bcm).expect(
             "Could not retrieve pin {}");
@@ -43,7 +43,7 @@ impl DrivesGpio for RpiGpioDriver {
         Ok(())
     }
 
-    fn set(&self, pin_bcm: u8) -> Result<(), GpioError> {
+    fn set(&mut self, pin_bcm: u8) -> Result<(), GpioError> {
         let pin = self.rpi_driver.get(pin_bcm);
         if pin.is_err() && matches!(pin.err().unwrap(), Error::Io(pin)) {
             return Err(GpioError::IO);
@@ -55,7 +55,7 @@ impl DrivesGpio for RpiGpioDriver {
         Ok(())
     }
 
-    fn clear(&self, pin_bcm: u8) -> Result<(), GpioError> {
+    fn clear(&mut self, pin_bcm: u8) -> Result<(), GpioError> {
         let pin = self.rpi_driver.get(pin_bcm);
         if pin.is_err() && matches!(pin.err().unwrap(), Error::Io(pin)) {
             return Err(GpioError::IO);

@@ -13,7 +13,7 @@ use subprocess::{
 use messager::ApiMessager;
 use errors::ApiError;
 
-use crate::models::api::ApiTickMessage;
+use crate::models::api::{ApiTickMessage, ApiTickOutputMessage};
 
 /// Exposes the API controller that controlls spawning and messaging the API
 /// child process.
@@ -44,9 +44,12 @@ impl ApiController {
     }
 
     /// Runs a tick of the controller. Must be called in a looped task.
-    pub fn run_tick(&mut self, data: ApiTickMessage) {
+    pub fn run_tick(
+        &mut self,
+        data: ApiTickMessage
+    ) -> Result<ApiTickOutputMessage, ApiError> {
         // TODO: Dangerous unwrap
-        self.api_messager.lock().unwrap().run_tick();
+        self.api_messager.lock().unwrap().run_tick()
     }
 
     /// Restarts the API process. Can be called to initally start the process.

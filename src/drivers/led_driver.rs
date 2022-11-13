@@ -1,29 +1,47 @@
 use uom::si::f32::Frequency;
 
-use crate::models::led_color::LedColor;
+use crate::{models::led_color::LedColor, io::interface::pwm::DrivesPwm};
 
-pub trait DrivesLed {
-    /// Sets the brightness of the LED.
-    ///
-    /// # Arguments
-    ///
-    /// * `value` - Must be between 0 and 1.
-    fn set_brightness(&mut self, value: f32);
-
-    fn set_color(&mut self, color: LedColor);
-
-    /// Sets the PWM frequency of the LED.
-    ///
-    /// Can be used to achieve a pulsating effect if desired.
-    fn set_freq(&mut self, freq: Frequency);
+#[derive(Clone, Copy)]
+pub struct LedDescriptor {
+    pub pin_r_bcm: u8,
+    pub pin_g_bcm: u8,
+    pub pin_b_bcm: u8,
+    pub frequency: Frequency
 }
 
+pub enum LedError {
+    IO
+}
+
+#[derive(Clone, Copy)]
 pub struct LedDriver {
+    descriptor: LedDescriptor
 }
 
 impl LedDriver {
-    pub fn new() -> Self {
+    pub fn new(descriptor: LedDescriptor) -> Self {
         Self {
+            descriptor
         }
+    }
+
+    /// Sets the LED color.
+    pub fn set_color(&self, color: LedColor,
+                     pwm_driver: &mut impl DrivesPwm) -> Result<(), LedError> {
+        if let Err(err) = pwm_driver.set_freq_dc(
+            self.descriptor.frequency, color.r, self.descriptor.pin_r_bcm) {
+            return Err(LedError::IO);
+        }
+        if let Err(err) = pwm_driver.set_freq_dc(
+            self.descriptor.frequency, color.g, self.descriptor.pin_g_bcm) {
+            return Err(LedError::IO);
+        }
+        if let Err(err) = pwm_driver.set_freq_dc(
+            self.descriptor.frequency, color.b, self.descriptor.pin_b_bcm) {
+            return Err(LedError::IO);
+        }
+
+        Ok(())
     }
 }

@@ -1,8 +1,9 @@
 #[derive(Clone, Copy)]
 pub struct LedColor {
-    r: f32,
-    g: f32,
-    b: f32
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32
 }
 
 impl LedColor {
@@ -16,11 +17,12 @@ impl LedColor {
         Ok(Self {
             r,
             g,
-            b
+            b,
+            a: 1f32
         })
     }
 
     pub fn off() -> Self {
-        Self { r: 0.0, g: 0.0, b: 0.0 }
+        Self { r: 0f32, g: 0f32, b: 0f32, a: 0f32 }
     }
 }

@@ -1,6 +1,6 @@
 use rppal::gpio::Gpio;
 
-use crate::{drivers::motor_driver::{MotorDriver, MotorDescriptor}, models::motor_power::{MotorPower, MotorPowerQuadrant}, io::interface::gpio::DrivesGpio};
+use crate::{drivers::{motor_driver::{MotorDriver, MotorDescriptor, MotorError, MotorDirection}, led_driver}, models::motor_power::{MotorPower, MotorPowerQuadrant}, io::interface::gpio::DrivesGpio};
 
 #[derive(Debug)]
 pub enum MotorControllerError {
@@ -23,7 +23,7 @@ impl MotorController {
 
     pub fn block(
         &self,
-        gpio_driver: &impl DrivesGpio
+        gpio_driver: &mut impl DrivesGpio
     ) -> Result<(), MotorControllerError> {
         let l = self.left_motor_driver.block(gpio_driver);
         if l.is_err() { return Err(MotorControllerError::IOError); }
@@ -34,16 +34,80 @@ impl MotorController {
         Ok(())
     }
 
-    pub fn set_vel(&self, vel: MotorPower) {
+    pub fn unblock(
+        &self,
+        gpio_driver: &mut impl DrivesGpio
+    ) -> Result<(), MotorControllerError> {
+        let l = self.left_motor_driver.unblock(gpio_driver);
+        if l.is_err() { return Err(MotorControllerError::IOError); }
+
+        let r = self.right_motor_driver.unblock(gpio_driver);
+        if r.is_err() { return Err(MotorControllerError::IOError); }
+
+        Ok(())
+    }
+
+    pub fn set_vel(
+        &self,
+        vel: MotorPower,
+        gpio_driver: &mut impl DrivesGpio
+    ) -> Result<(), MotorControllerError> {
+        if vel.is_locked() {
+            return self.block(gpio_driver);
+        }
+
+        if let Err(err) = self.unblock(gpio_driver) { return Err(err); }
+
         match vel.as_quadrant() {
             MotorPowerQuadrant::PLeftPRight => {
+                if let Err(err) = self.left_motor_driver.set_direction(
+                        MotorDirection::CounterClockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
+                if let Err(err) = self.right_motor_driver.set_direction(
+                        MotorDirection::Clockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
             }
             MotorPowerQuadrant::PLeftNRight => {
+                if let Err(err) = self.left_motor_driver.set_direction(
+                        MotorDirection::CounterClockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
+                if let Err(err) = self.right_motor_driver.set_direction(
+                        MotorDirection::CounterClockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
             }
             MotorPowerQuadrant::NLeftPRight => {
+                if let Err(err) = self.left_motor_driver.set_direction(
+                        MotorDirection::Clockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
+                if let Err(err) = self.right_motor_driver.set_direction(
+                        MotorDirection::Clockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
             }
             MotorPowerQuadrant::NLeftNRight => {
+                if let Err(err) = self.left_motor_driver.set_direction(
+                        MotorDirection::Clockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
+                if let Err(err) = self.right_motor_driver.set_direction(
+                        MotorDirection::CounterClockwise, gpio_driver) {
+                    return Err(MotorControllerError::IOError);
+                }
             }
         }
+
+        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_left()) {
+            return Err(MotorControllerError::IOError);
+        };
+        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_right()) {
+            return Err(MotorControllerError::IOError);
+        };
+
+        Ok(())
     }
 }

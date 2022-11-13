@@ -83,9 +83,13 @@ class IPCSendVelocityMessage(IPCMessage):
 
 class IPCStatus(IntEnum):
     SUCCESS = 0
+    INVALID_ENCODING = 1,
+    INVALID_REQUEST_HEAD = 2,
+    INVALID_REQUEST_BODY = 3,
+    INVALID_REQUEST_ARGS = 4
 
 
-class IPCResponse:
+class IPCResponse(object):
     def __init__(self, as_bytes):
         # type: (bytes) -> None
         self._data = as_bytes
@@ -109,7 +113,7 @@ class IPCResponse:
 class IPCResponseError(IPCResponse):
     def __init__(self, as_bytes):
         # type: (bytes) -> None
-        super().__init__(as_bytes)
+        IPCResponse.__init__(self, as_bytes)
         self.__error_deserialized = None
 
     @property
@@ -118,7 +122,7 @@ class IPCResponseError(IPCResponse):
         if self.__error_deserialized is not None:
             return self.__error_deserialized
 
-        parent_result = super().deserialized
+        parent_result = super(IPCResponseError, self).deserialized
         assert isinstance(parent_result['body'], bytes)
         parent_result['body'] = parent_result['body'].decode('ascii')
         self.__error_deserialized = parent_result
@@ -165,12 +169,11 @@ class IPCMessager(object):
                 raise zmq.ZMQError(zmq.EAGAIN,
                                    'Timed out waiting for response')
             msg = self._tx_sock.recv()
-            assert isinstance(msg, ByteString)
             response = IPCResponse(bytes(msg))
 
             # Ensure that the status is successful.
             if response.deserialized['status'] != IPCStatus.SUCCESS:
-                response.__class__ = IPCResponseError
+                response = IPCResponseError(bytes(msg))
                 raise IPCInvalidResponse(response.deserialized['body'])
         except (zmq.ZMQError, AssertionError) as err:
             # TODO: Warn user

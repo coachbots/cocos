@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::fs::File;
+
 use config::APP_CONFIG;
 use controllers::master::MasterController;
 use io::sim_print::{
@@ -22,8 +24,8 @@ lazy_static! {
                                                    PrintUartDriver> =
     MasterController::new(
         &APP_CONFIG,
-        PrintGpioDriver::new(),
-        PrintPwmDriver::new(),
+        PrintGpioDriver::new(File::create("sim_gpio.out").unwrap()),
+        PrintPwmDriver::new(File::create("sim_pwm.out").unwrap()),
         PrintUartDriver::new()
     );
 }

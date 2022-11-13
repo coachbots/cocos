@@ -16,6 +16,8 @@ pub struct MotorDescriptor {
 }
 
 #[derive(Clone, Copy)]
+/// Represents a single motor controller. This driver can control any arbitrary
+/// motors connected via any GPIO and PWM pins.
 pub struct MotorDriver {
     descriptor: MotorDescriptor,
 }
@@ -32,7 +34,7 @@ impl MotorDriver {
     /// It is left to the implementation to decide whether the motor will be
     /// halted upon this function call.
     pub fn unblock(&self,
-                   gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
+                   gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
         let l_out = gpio_driver.clear(self.descriptor.pin_left_bcm);
         if l_out.is_err() { return Err(MotorError::IOError); }
 
@@ -47,7 +49,7 @@ impl MotorDriver {
     /// This function must immediately halt the motor and block it from further
     /// operation.
     pub fn block(&self,
-                 gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
+                 gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
         let l_out = gpio_driver.set(self.descriptor.pin_left_bcm);
         if l_out.is_err() { return Err(MotorError::IOError); }
 
@@ -76,7 +78,7 @@ impl MotorDriver {
     pub fn set_direction(
         &self,
         direction: MotorDirection,
-        gpio_driver: &impl DrivesGpio
+        gpio_driver: &mut impl DrivesGpio
     ) -> Result<(), MotorError> {
         match direction {
             MotorDirection::CounterClockwise => {
@@ -98,7 +100,7 @@ impl MotorDriver {
     }
 
     pub fn init(&self,
-                gpio_driver: &impl DrivesGpio) -> Result<(), MotorError> {
+                gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
         let l_out = gpio_driver.set_out(self.descriptor.pin_left_bcm,
                                         PullMode::Down);
         if l_out.is_err() { return Err(MotorError::IOError); }

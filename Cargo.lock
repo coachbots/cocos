@@ -193,6 +193,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "static_assertions",
  "subprocess",
  "uom",
  "zmq",
@@ -669,6 +670,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f406d6ee68db6796e11ffd7b4d171864c58b7451e79ef9460ea33c287a1f89a7"
 
 [[package]]
 name = "subprocess"
