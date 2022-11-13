@@ -1,30 +1,21 @@
 use std::str::from_utf8;
 
+use crate::controllers::api::ipc_responses::{ApiIpcErrorResponseBody, ApiIpcPosResponseBody};
+use crate::models::api::{ApiTickInputMessage, ApiTickOutputMessage};
+use crate::models::led_color::LedColor;
+use crate::models::motor_power::MotorPower;
 use log::debug;
 use serde::Deserialize;
 /// This module exposes the [ApiMessager] class which is responsible for
 /// communication with the API.
-
 use zmq;
-use crate::controllers::api::ipc_responses::{ApiIpcErrorResponseBody, ApiIpcPosResponseBody};
-use crate::models::api::{ApiTickOutputMessage, ApiTickInputMessage};
-use crate::models::led_color::LedColor;
-use crate::models::motor_power::MotorPower;
 
 use super::errors::ApiError;
 use super::ipc_requests::{
-    ApiIpcRequestType,
-    ApiIpcRequest,
-    ApiIpcLedRequestBody,
-    ApiIpcVelRequestBody,
-    ValidatesApiIpcBody, ApiIpcPosRequestBody
+    ApiIpcLedRequestBody, ApiIpcPosRequestBody, ApiIpcRequest, ApiIpcRequestType,
+    ApiIpcVelRequestBody, ValidatesApiIpcBody,
 };
-use super::ipc_responses::{
-    ApiStatus,
-    ApiResponse,
-    ApiIpcLedResponseBody,
-    ApiIpcVelResponseBody
-};
+use super::ipc_responses::{ApiIpcLedResponseBody, ApiIpcVelResponseBody, ApiResponse, ApiStatus};
 
 /// Represents the main class used for communication with the API.
 ///
@@ -39,7 +30,7 @@ pub struct ApiMessager {
 
     /// The zmq socket used for communication. A [None] value represents either
     /// an unusable socket and/or an unconstructed socket.
-    socket: Option<zmq::Socket>
+    socket: Option<zmq::Socket>,
 }
 
 impl ApiMessager {
@@ -51,7 +42,7 @@ impl ApiMessager {
         ApiMessager {
             comm_file,
             context: zmq::Context::new(),
-            socket: Option::None
+            socket: Option::None,
         }
     }
 
@@ -67,9 +58,7 @@ impl ApiMessager {
                 self.socket = Some(sock);
                 Ok(())
             }
-            Err(err) => {
-                Err(ApiError::ZMQError(err))
-            }
+            Err(err) => Err(ApiError::ZMQError(err)),
         }
     }
 
@@ -77,7 +66,7 @@ impl ApiMessager {
     pub fn stop(&mut self) {
         match &mut self.socket {
             None => {}
-            Some(sock) => {
+            Some(_sock) => {
                 self.socket = Option::None;
             }
         }
@@ -93,21 +82,23 @@ impl ApiMessager {
     ///
     /// [ApiError::DecodeError] is raised when the bytes could not be decoded,
     /// however, the API is notified via an [ApiStatus::InvalidEncoding].
-    pub fn run_tick(&mut self,
-                    data: ApiTickInputMessage) -> Result<ApiTickOutputMessage, ApiError> {
+    pub fn run_tick(
+        &mut self,
+        data: ApiTickInputMessage,
+    ) -> Result<ApiTickOutputMessage, ApiError> {
         match &self.socket {
-            None => { Err(ApiError::SockNotReady) }
+            None => Err(ApiError::SockNotReady),
             Some(sock) => {
                 // Receive the message, raising an error if an error ocurred.
                 let message_res = sock.recv_msg(0);
                 if let Err(err) = message_res {
                     return Err(ApiError::ZMQError(err));
                 }
+
                 let message = message_res.unwrap();
                 log::debug!(target: "system.api.messager",
                             "Received raw message: {:?}",
-                            from_utf8(&message.to_vec()).unwrap_or(
-                                "<ERROR_PARSING_UTF8>"));
+                            from_utf8(&message.to_vec()).unwrap_or("<ERROR_PARSING_UTF8>"));
 
                 // Ensure the data received is valid UTF-8.
                 if message.as_str().is_none() {
@@ -115,12 +106,19 @@ impl ApiMessager {
                         status: ApiStatus::InvalidEncoding,
                         body: serde_json::to_string(&ApiIpcErrorResponseBody {
                             message: "The character encoding is not UTF-8. 
-                                Are you trying something funny?".to_string()
-                        }).unwrap()
-                    }).unwrap();
+                                Are you trying something funny?"
+                                .to_string(),
+                        })
+                        .unwrap(),
+                    })
+                    .unwrap();
                     match self.send_response(response) {
-                        Ok(()) => { return Err(ApiError::DecodeError); }
-                        Err(err) => { return Err(err); }
+                        Ok(()) => {
+                            return Err(ApiError::DecodeError);
+                        }
+                        Err(err) => {
+                            return Err(err);
+                        }
                     }
                 }
 
@@ -130,17 +128,25 @@ impl ApiMessager {
                 // Ensure the message header can be decoded correctly.
                 let req_opt: Result<ApiIpcRequest, serde_json::Error> =
                     serde_json::from_str(msg_str);
+
                 if req_opt.is_err() {
                     let response = serde_json::to_string(&ApiResponse {
                         status: ApiStatus::InvalidRequestHead,
                         body: serde_json::to_string(&ApiIpcErrorResponseBody {
                             message: "The header of the message is invalid. 
-                                Are you trying something funny?".to_string()
-                        }).unwrap()
-                    }).unwrap();
+                                Are you trying something funny?"
+                                .to_string(),
+                        })
+                        .unwrap(),
+                    })
+                    .unwrap();
                     match self.send_response(response) {
-                        Ok(()) => { return Err(ApiError::InvalidRequestHead); }
-                        Err(err) => { return Err(err); }
+                        Ok(()) => {
+                            return Err(ApiError::InvalidRequestHead);
+                        }
+                        Err(err) => {
+                            return Err(err);
+                        }
                     }
                 }
                 let request = req_opt.unwrap();
@@ -152,53 +158,61 @@ impl ApiMessager {
     fn handle_led_request(
         &mut self,
         request: ApiIpcLedRequestBody,
-        input_data: &ApiTickInputMessage
+        _input_data: &ApiTickInputMessage,
     ) -> (ApiResponse, ApiTickOutputMessage) {
-        // TODO: Emit to data channel
-        debug!(target: "system.api.request",
-               "Received LED request {:?}", request);
-        (ApiResponse {
-            status: ApiStatus::Success,
-            body: serde_json::to_string(&ApiIpcLedResponseBody {}).unwrap()
-        }, ApiTickOutputMessage::led(LedColor::new(
-            request.r as f32 / 255f32,
-            request.g as f32 / 255f32,
-            request.b as f32 / 255f32
-        ).unwrap()))
+        debug!(target: "system.api.request", "Received LED request {:?}", request);
+        (
+            ApiResponse {
+                status: ApiStatus::Success,
+                body: serde_json::to_string(&ApiIpcLedResponseBody {}).unwrap(),
+            },
+            ApiTickOutputMessage::led(
+                LedColor::new(
+                    request.r as f32 / 255f32,
+                    request.g as f32 / 255f32,
+                    request.b as f32 / 255f32,
+                )
+                .unwrap(),
+            ),
+        )
     }
 
     fn handle_vel_request(
         &mut self,
         request: ApiIpcVelRequestBody,
-        input_data: &ApiTickInputMessage
+        _input_data: &ApiTickInputMessage,
     ) -> (ApiResponse, ApiTickOutputMessage) {
-        debug!(target: "system.api.request",
-               "Received velocity request {:?}", request);
-        (ApiResponse {
-            status: ApiStatus::Success,
-            body: serde_json::to_string(&ApiIpcVelResponseBody {}).unwrap()
-        }, ApiTickOutputMessage::motor(MotorPower::new(
-            request.l as f32 / 100f32,
-            request.r as f32 / 100f32,
-            false
-        ).unwrap()))
+        debug!(target: "system.api.request", "Received velocity request {:?}", request);
+        (
+            ApiResponse {
+                status: ApiStatus::Success,
+                body: serde_json::to_string(&ApiIpcVelResponseBody {}).unwrap(),
+            },
+            ApiTickOutputMessage::motor(
+                MotorPower::new(request.l as f32 / 100f32, request.r as f32 / 100f32, false)
+                    .unwrap(),
+            ),
+        )
     }
 
     fn handle_pos_request(
         &mut self,
         request: ApiIpcPosRequestBody,
-        input_data: &ApiTickInputMessage
+        input_data: &ApiTickInputMessage,
     ) -> (ApiResponse, ApiTickOutputMessage) {
-        debug!(target: "system.api.request",
-               "Received position request {:?}.", request);
-        (ApiResponse {
-            status: ApiStatus::Success,
-            body: serde_json::to_string(&ApiIpcPosResponseBody {
-                x: input_data.bot_pos.x.value,
-                y: input_data.bot_pos.y.value,
-                theta: input_data.bot_pos.theta.value
-            }).unwrap()
-        }, ApiTickOutputMessage::none())
+        debug!(target: "system.api.request", "Received position request {:?}.", request);
+        (
+            ApiResponse {
+                status: ApiStatus::Success,
+                body: serde_json::to_string(&ApiIpcPosResponseBody {
+                    x: input_data.bot_pos.x.value,
+                    y: input_data.bot_pos.y.value,
+                    theta: input_data.bot_pos.theta.value,
+                })
+                .unwrap(),
+            },
+            ApiTickOutputMessage::none(),
+        )
     }
 
     /// Handles an arbitrary IPC request.
@@ -208,23 +222,17 @@ impl ApiMessager {
     fn handle_request(
         &mut self,
         request: &ApiIpcRequest,
-        input_data: &ApiTickInputMessage
+        input_data: &ApiTickInputMessage,
     ) -> Result<ApiTickOutputMessage, ApiError> {
         match request.request_type {
             ApiIpcRequestType::Led => {
-                self.validate_and_handle_body(request,
-                                              &mut Self::handle_led_request,
-                                              input_data)
+                self.validate_and_handle_body(request, &mut Self::handle_led_request, input_data)
             }
             ApiIpcRequestType::Vel => {
-                self.validate_and_handle_body(request,
-                                              &mut Self::handle_vel_request,
-                                              input_data)
+                self.validate_and_handle_body(request, &mut Self::handle_vel_request, input_data)
             }
             ApiIpcRequestType::Pos => {
-                self.validate_and_handle_body(request,
-                                              &mut Self::handle_pos_request,
-                                              input_data)
+                self.validate_and_handle_body(request, &mut Self::handle_pos_request, input_data)
             }
         }
     }
@@ -235,74 +243,75 @@ impl ApiMessager {
     fn validate_and_handle_body<'a, BodyType>(
         &mut self,
         request: &'a ApiIpcRequest,
-        handler: &mut dyn FnMut(&mut Self,
-                                BodyType,
-                                &ApiTickInputMessage) -> (ApiResponse, ApiTickOutputMessage),
-        input_data: &ApiTickInputMessage
+        handler: &mut dyn FnMut(
+            &mut Self,
+            BodyType,
+            &ApiTickInputMessage,
+        ) -> (ApiResponse, ApiTickOutputMessage),
+        input_data: &ApiTickInputMessage,
     ) -> Result<ApiTickOutputMessage, ApiError>
-        where BodyType: Deserialize<'a> + ValidatesApiIpcBody {
+    where
+        BodyType: Deserialize<'a> + ValidatesApiIpcBody,
+    {
         // Validate body
-        let body: Result<BodyType, ApiError> =
-            self.validate_body(&request.body.as_str());
+        let body: Result<BodyType, ApiError> = self.validate_body(&request.body.as_str());
         match body {
             Ok(valid_body) => {
                 // Call the appropriate handler if the body is valid.
                 let (response, state) = handler(self, valid_body, input_data);
-                if let Err(e) = self.send_response(
-                        serde_json::to_string(&response).unwrap()) {
-                    return Err(e);
+                match self.send_response(serde_json::to_string(&response).unwrap()) {
+                    Err(e) => Err(e),
+                    Ok(()) => Ok(state),
                 }
-                return Ok(state);
             }
-            Err(error) => { return Err(error); }
+            Err(error) => {
+                return Err(error);
+            }
         }
     }
 
     /// Sends a response to the last request.
     fn send_response(&mut self, response: String) -> Result<(), ApiError> {
         match &self.socket {
-            None => { Err(ApiError::SockNotReady) }
-            Some(sock) => {
-                match sock.send_str(response.as_str(), 1) {
-                    Ok(()) => { Ok(()) }
-                    Err(err) => { Err(ApiError::ZMQError(err)) }
-                }
-            }
+            None => Err(ApiError::SockNotReady),
+            Some(sock) => match sock.send(response.as_str(), 1) {
+                Ok(()) => Ok(()),
+                Err(err) => Err(ApiError::ZMQError(err)),
+            },
         }
     }
 
     /// This function is responsible for validating IPCRequestBody's.
     fn validate_body<'a, RequestBodyType>(
         &mut self,
-        body_str: &'a str)
-    -> Result<RequestBodyType, ApiError>
-        where RequestBodyType: Deserialize<'a> + ValidatesApiIpcBody {
-
+        body_str: &'a str,
+    ) -> Result<RequestBodyType, ApiError>
+    where
+        RequestBodyType: Deserialize<'a> + ValidatesApiIpcBody,
+    {
         // Parse the body, failing on error.
-        let body_opt: Result<RequestBodyType, serde_json::Error> =
-            serde_json::from_str(body_str);
+        let body_opt: Result<RequestBodyType, serde_json::Error> = serde_json::from_str(body_str);
 
         match body_opt {
             Ok(valid_body) => {
-                // If the body is successfully parsed, we must
-                // valiate it's arguments.
+                // If the body is successfully parsed, we must valiate its arguments.
                 if !valid_body.validate() {
-                    println!("Invalid");
                     let response = serde_json::to_string(&ApiResponse {
                         status: ApiStatus::InvalidRequestArgs,
-                        body: serde_json::to_string(
-                            &ApiIpcErrorResponseBody {
-                                message: "The body params are invalid.
-                                    Are you trying something funny?"
-                                    .to_string()
-                            }
-                        ).unwrap()
-                    }).unwrap();
+                        body: serde_json::to_string(&ApiIpcErrorResponseBody {
+                            message: "The body params are invalid. Are you trying something funny?"
+                                .to_string(),
+                        })
+                        .unwrap(),
+                    })
+                    .unwrap();
                     match self.send_response(response) {
                         Ok(()) => {
                             return Err(ApiError::InvalidRequestBody);
                         }
-                        Err(err) => { return Err(err); }
+                        Err(err) => {
+                            return Err(err);
+                        }
                     }
                 }
 
@@ -310,22 +319,18 @@ impl ApiMessager {
                 Ok(valid_body)
             }
             Err(error) => {
-                // If we did not successfully parse the body, let us notify the
-                // API.
+                // If we did not successfully parse the body, let us notify the API.
                 let response = serde_json::to_string(&ApiResponse {
                     status: ApiStatus::InvalidRequestBody,
-                    body: serde_json::to_string(
-                        &ApiIpcErrorResponseBody {
-                            message: "The body is invalid. Are you
-                                trying something funny?".to_string()
-                        }
-                    ).unwrap()
-                }).unwrap();
+                    body: serde_json::to_string(&ApiIpcErrorResponseBody {
+                        message: "The body is invalid. Are you trying something funny?".to_string(),
+                    })
+                    .unwrap(),
+                })
+                .unwrap();
                 match self.send_response(response) {
-                    Ok(()) => {
-                        return Err(ApiError::InvalidRequestBody);
-                    }
-                    Err(err) => { return Err(err); }
+                    Ok(()) => Err(ApiError::InvalidRequestBody),
+                    Err(err) => Err(err),
                 }
             }
         }

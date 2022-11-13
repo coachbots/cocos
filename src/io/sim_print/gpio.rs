@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use super::super::interface::gpio::{DrivesGpio, PullMode, GpioError};
+use super::super::interface::gpio::{DrivesGpio, GpioError, PullMode};
 
 /// This GPIO IO implementation outputs its data to an injected file. The
 /// encoding is a tremendously simple CSV-style output that can be used to
@@ -13,14 +13,12 @@ use super::super::interface::gpio::{DrivesGpio, PullMode, GpioError};
 /// A `C` packet indicates a GPIO configuration while an `S` packet represents
 /// an output state change.
 pub struct PrintGpioDriver {
-    file: File
+    file: File,
 }
 
 impl PrintGpioDriver {
     pub fn new(file: File) -> PrintGpioDriver {
-        PrintGpioDriver {
-            file
-        }
+        PrintGpioDriver { file }
     }
 }
 
@@ -35,14 +33,12 @@ impl DrivesGpio for PrintGpioDriver {
         Result::Ok(())
     }
 
-    fn set_out(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError> {
+    fn set_out(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError> {
         writeln!(self.file, "C,{:?},O,{:?}", pin_bcm, pull_mode);
         Result::Ok(())
     }
 
-    fn set_inp(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError> {
+    fn set_inp(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError> {
         writeln!(self.file, "C,{:?},I,{:?}", pin_bcm, pull_mode);
         Result::Ok(())
     }

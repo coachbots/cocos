@@ -5,6 +5,7 @@ usercode.
 """
 
 from cocos_py2 import cocos
+import time
 import logging
 
 class Coachbot:
@@ -113,7 +114,7 @@ class Coachbot:
         """
 
     def get_pose(self):
-        # type: () -> tuple[float, float, float] | None
+        # type: () -> tuple[float, float, float]
         """
         This function retrieves the pose of the robot, if it can. If it can't
         it returns None.
@@ -123,6 +124,10 @@ class Coachbot:
             y, theta) if new data available since last invokation, None
             otherwise.
         """
+        try:
+            return self.__cocos.send_get_position()
+        except ValueError as v_err:
+            self.logger.exception(v_err)
 
     def delay(self, millis=200):
         # type: (float) -> None
@@ -134,3 +139,4 @@ class Coachbot:
         Todo:
             Handle better the complicated exception that is raised.
         """
+        time.sleep(float(millis) / 1000.0)  # TODO: Is this ok?

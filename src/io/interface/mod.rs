@@ -1,11 +1,11 @@
 use self::gpio::DrivesGpio;
-use self::uart::DrivesUart;
 use self::pwm::DrivesPwm;
+use self::uart::DrivesUart;
 
 pub enum IOError {
     Unknown,
     Reinitialization,
-    Uninitialized
+    Uninitialized,
 }
 
 pub trait IODriver {
@@ -16,10 +16,10 @@ pub trait IODriver {
 pub struct IOProvider {
     pub gpio_driver: Box<dyn DrivesGpio>,
     pub uart_driver: Box<dyn DrivesUart>,
-    pub pwm_driver: Box<dyn DrivesPwm>
+    pub pwm_driver: Box<dyn DrivesPwm>,
 }
 
-pub mod net;
 pub mod gpio;
+pub mod net;
 pub mod pwm;
 pub mod uart;

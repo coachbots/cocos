@@ -1,5 +1,4 @@
 /// This module defines respones that are sent to the API.
-
 use serde::Serialize;
 use serde_repr::Serialize_repr;
 
@@ -11,7 +10,7 @@ pub enum ApiStatus {
     InvalidEncoding = 1,
     InvalidRequestHead = 2,
     InvalidRequestBody = 3,
-    InvalidRequestArgs = 4
+    InvalidRequestArgs = 4,
 }
 
 #[derive(Serialize)]
@@ -22,13 +21,13 @@ pub struct ApiResponse {
     pub status: ApiStatus,
 
     /// The body of the error code.
-    pub body: String
+    pub body: String,
 }
 
 #[derive(Serialize)]
 /// Represents a body returned upon an error.
 pub struct ApiIpcErrorResponseBody {
-    pub message: String
+    pub message: String,
 }
 
 #[derive(Serialize)]
@@ -41,4 +40,8 @@ pub struct ApiIpcVelResponseBody {}
 
 #[derive(Serialize)]
 /// Represents a body returned upon a position query.
-pub struct ApiIpcPosResponseBody { pub x: f32, pub y: f32, pub theta: f32 }
+pub struct ApiIpcPosResponseBody {
+    pub x: f32,
+    pub y: f32,
+    pub theta: f32,
+}

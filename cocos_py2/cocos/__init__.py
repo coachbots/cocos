@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, print_function
 from abc import abstractmethod, ABCMeta
-#from typing import ByteString, Tuple, Dict, Union
 import json
 import zmq
 from enum import IntEnum
@@ -15,7 +14,8 @@ MESSAGE_ENCODING = 'ascii'
 # For whatever reason I could not get IntEnum to behave.
 IPC_MESSAGE_TYPES = {
     'LED': 0,
-    'VEL': 1
+    'VEL': 1,
+    'POS': 2
 }
 
 
@@ -37,6 +37,10 @@ class IPCMessage(object):
             'body': self.serialize()
         }).encode(MESSAGE_ENCODING)
 
+    @staticmethod
+    def unpack_response(response):
+        # type: (IPCResponse) -> Any
+        return None
 
 class IPCSendLedMessage(IPCMessage):
     __TYPE__ = IPC_MESSAGE_TYPES['LED']
@@ -79,6 +83,22 @@ class IPCSendVelocityMessage(IPCMessage):
             'l': self._vels[0],
             'r': self._vels[1]
         }).encode(MESSAGE_ENCODING)
+
+
+class IPCSendPosRequestMessage(IPCMessage):
+    __TYPE__ = IPC_MESSAGE_TYPES['POS']
+    def __init__(self):
+        # type: () -> None
+        super(IPCSendPosRequestMessage, self).__init__()
+
+    def serialize(self):
+        return json.dumps({}).encode(MESSAGE_ENCODING)
+
+    @staticmethod
+    def unpack_response(response):
+        # type: (IPCResponse) -> Tuple[float, float, float]
+        body = json.loads(response.deserialized['body'])
+        return (body['x'], body['y'], body['theta'])
 
 
 class IPCStatus(IntEnum):
@@ -175,6 +195,7 @@ class IPCMessager(object):
             if response.deserialized['status'] != IPCStatus.SUCCESS:
                 response = IPCResponseError(bytes(msg))
                 raise IPCInvalidResponse(response.deserialized['body'])
+            return message.__class__.unpack_response(response)
         except (zmq.ZMQError, AssertionError) as err:
             # TODO: Warn user
             # Error ocurred, so the best we can do is recreate the socket in
@@ -185,10 +206,6 @@ class IPCMessager(object):
 class CocosCommunicator(object):
     def __init__(self, tx_addr):
         # type: (str) -> None
-        self.messages = {
-            IPCSendLedMessage.__TYPE__: None,
-            IPCSendVelocityMessage.__TYPE__: None
-        }
         self._messager = IPCMessager(tx_addr)
 
     def begin(self):
@@ -214,3 +231,9 @@ class CocosCommunicator(object):
         """
         message = IPCSendVelocityMessage(velocities)
         self._messager.tx(message)
+
+    def send_get_position(self):
+        # type: () -> Tuple[float, float, float]
+        """Sends a position request, returning the data."""
+        message = IPCSendPosRequestMessage()
+        return self._messager.tx(message)

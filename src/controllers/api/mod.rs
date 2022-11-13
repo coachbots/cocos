@@ -1,17 +1,17 @@
+pub mod errors;
 pub mod ipc_requests;
 pub mod ipc_responses;
 pub mod messager;
-pub mod errors;
 
-use std::{sync::{Arc, Mutex}, borrow::Borrow, time::Duration};
-use std::io::Write;
-use subprocess::{
-    Popen,
-    PopenConfig,
-    Redirection
-};
-use messager::ApiMessager;
 use errors::ApiError;
+use messager::ApiMessager;
+use std::io::Write;
+use std::{
+    borrow::Borrow,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+use subprocess::{Popen, PopenConfig, Redirection};
 
 use crate::models::api::{ApiTickInputMessage, ApiTickOutputMessage};
 
@@ -29,7 +29,7 @@ impl ApiController {
         ApiController {
             running_process: Option::None,
             api_messager: Mutex::new(ApiMessager::new(comm_uri)),
-            script: vec![]
+            script: vec![],
         }
     }
 
@@ -38,7 +38,9 @@ impl ApiController {
     /// This function can only be called when the script is paused and returns
     /// ApiError::General otherwise.
     pub fn set_script(&mut self, string: Vec<u8>) -> Result<(), ApiError> {
-        if !self.running_process.is_none() { return Err(ApiError::General); }
+        if !self.running_process.is_none() {
+            return Err(ApiError::General);
+        }
         self.script = string;
         Ok(())
     }
@@ -46,7 +48,7 @@ impl ApiController {
     /// Runs a tick of the controller. Must be called in a looped task.
     pub fn run_tick(
         &mut self,
-        data: ApiTickInputMessage
+        data: ApiTickInputMessage,
     ) -> Result<ApiTickOutputMessage, ApiError> {
         // TODO: Dangerous unwrap
         self.api_messager.lock().unwrap().run_tick(data)
@@ -55,7 +57,9 @@ impl ApiController {
     /// Restarts the API process. Can be called to initally start the process.
     pub fn restart_api(&mut self) -> Result<(), ApiError> {
         let kill_err = self.kill();
-        if kill_err.is_err() { return Err(kill_err.unwrap_err()); }
+        if kill_err.is_err() {
+            return Err(kill_err.unwrap_err());
+        }
         let mut messager = self.api_messager.lock().unwrap();
 
         let api_proc = Popen::create(
@@ -64,7 +68,7 @@ impl ApiController {
                 stdin: Redirection::Pipe,
                 detached: true,
                 ..Default::default()
-            }
+            },
         );
 
         if api_proc.is_err() {
@@ -73,13 +77,17 @@ impl ApiController {
 
         self.running_process = Some(Arc::new(Mutex::new(api_proc.unwrap())));
         match &self.running_process {
-            None => { return Err(ApiError::ProcessError); }
+            None => {
+                return Err(ApiError::ProcessError);
+            }
             Some(proc_rc) => {
                 let proc_arc = proc_rc.clone();
                 let mut proc = proc_arc.lock().unwrap();
                 match &mut proc.stdin {
-                    None => { return Err(ApiError::IO); }
-                    Some (stdin) => {
+                    None => {
+                        return Err(ApiError::IO);
+                    }
+                    Some(stdin) => {
                         if stdin.write_all(self.script.borrow()).is_err() {
                             return Err(ApiError::IO);
                         }
@@ -89,8 +97,7 @@ impl ApiController {
         }
 
         match messager.start() {
-            Ok(()) => {
-            }
+            Ok(()) => {}
             Err(err) => {
                 return Err(err);
             }
@@ -121,16 +128,14 @@ impl ApiController {
                 match borrowed.wait_timeout(Duration::from_secs(2)).unwrap() {
                     Some(_) => {
                         return Err(ApiError::ProcessError);
-                    },
+                    }
                     None => {
                         borrowed.kill(); // TODO: Handle error
                     }
                 }
                 Ok(())
             }
-            None => {
-                Ok(())
-            }
+            None => Ok(()),
         }
     }
 }

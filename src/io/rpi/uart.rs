@@ -1,18 +1,15 @@
 use super::super::interface::uart::{DrivesUart, UartError};
 
 #[derive(Copy, Clone)]
-pub struct RpiUartDriver {
-}
+pub struct RpiUartDriver {}
 
 impl RpiUartDriver {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 }
 
-impl RpiUartDriver {
-}
+impl RpiUartDriver {}
 
 impl DrivesUart for RpiUartDriver {
     fn read_byte(&self) -> Result<u8, UartError> {

@@ -35,7 +35,9 @@ TEST_SCRIPT = \
 """
 def usr(bot):
     while True:
+        current_pos = bot.get_pose()
         bot.set_vel(100, 100)
+        bot.delay()
 """
 
 def main():

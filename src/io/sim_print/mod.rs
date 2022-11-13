@@ -1,3 +1,3 @@
 pub mod gpio;
-pub mod uart;
 pub mod pwm;
+pub mod uart;

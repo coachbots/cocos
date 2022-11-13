@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use uom::si::{f32::Frequency, frequency::hertz};
 
-use crate::drivers::{motor_driver::MotorDescriptor, nucifera_driver::NuciferaDescriptor, led_driver::LedDescriptor};
+use crate::drivers::{
+    led_driver::LedDescriptor, motor_driver::MotorDescriptor, nucifera_driver::NuciferaDescriptor,
+};
 
 pub struct AppConfig {
     pub mot_left: MotorDescriptor,
@@ -11,7 +13,7 @@ pub struct AppConfig {
     pub led: LedDescriptor,
 
     /// Determines the maximum motor power update rate in milliseconds.
-    pub drive_update_period: Duration
+    pub drive_update_period: Duration,
 }
 
 lazy_static! {

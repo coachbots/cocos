@@ -2,11 +2,11 @@
 pub enum PullMode {
     Up,
     Down,
-    Floating
+    Floating,
 }
 
 pub enum GpioError {
-    IO
+    IO,
 }
 
 pub trait DrivesGpio {
@@ -17,10 +17,8 @@ pub trait DrivesGpio {
     fn clear(&mut self, pin_bcm: u8) -> Result<(), GpioError>;
 
     /// Sets a pin to be an output pin.
-    fn set_out(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError>;
+    fn set_out(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError>;
 
     /// Sets a pin to be an input pin.
-    fn set_inp(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError>;
+    fn set_inp(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError>;
 }

@@ -1,13 +1,11 @@
 use super::super::interface::uart::{DrivesUart, UartError};
 
 #[derive(Copy, Clone)]
-pub struct PrintUartDriver {
-}
+pub struct PrintUartDriver {}
 
 impl PrintUartDriver {
     pub fn new() -> PrintUartDriver {
-        PrintUartDriver {
-        }
+        PrintUartDriver {}
     }
 }
 

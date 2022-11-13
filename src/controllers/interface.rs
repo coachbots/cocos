@@ -1,13 +1,17 @@
-use crate::models::{
-    position::Position,
-    motor_power::MotorPower,
-    led_color::LedColor
-};
+use crate::models::{led_color::LedColor, motor_power::MotorPower, position::Position};
 
-pub trait HandlesTick1Ms { fn on_tick1(&mut self); }
-pub trait HandlesTick10Ms { fn on_tick10(&mut self); }
-pub trait HandlesTick100Ms { fn on_tick100(&mut self); }
-pub trait HandlesTick1000Ms { fn on_tick1000(&mut self); }
+pub trait HandlesTick1Ms {
+    fn on_tick1(&mut self);
+}
+pub trait HandlesTick10Ms {
+    fn on_tick10(&mut self);
+}
+pub trait HandlesTick100Ms {
+    fn on_tick100(&mut self);
+}
+pub trait HandlesTick1000Ms {
+    fn on_tick1000(&mut self);
+}
 
 pub trait HandlesPyApi {
     /// Called by the python API to set the current speed.

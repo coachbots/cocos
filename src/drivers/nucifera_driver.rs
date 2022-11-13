@@ -1,23 +1,22 @@
-use std::sync::MutexGuard;
 use crate::{
     io::interface::{uart::DrivesUart, IODriver, IOError},
-    models::position::Position
+    models::position::Position,
 };
+use std::sync::MutexGuard;
 
 #[derive(Clone, Copy)]
 pub struct NuciferaDescriptor {
     pub pin_uart_tx_bcm: u8,
     pub pin_uart_rx_bcm: u8,
-    pub baud_rate: u16
+    pub baud_rate: u16,
 }
 
 #[derive(Clone, Copy)]
 pub struct NuciferaDriver {
-    descriptor: NuciferaDescriptor
+    descriptor: NuciferaDescriptor,
 }
 
-pub struct NuciferaMessage {
-}
+pub struct NuciferaMessage {}
 
 impl IODriver for NuciferaDriver {
     fn init(&mut self) -> Result<(), IOError> {
@@ -36,8 +35,10 @@ impl NuciferaDriver {
     /// In case Nucifera provides more than 1 position sample since the last
     /// invokation of this function, it is left to the implementation to decide
     /// on the behavior.
-    pub fn read_current_position<UartDriver: DrivesUart>(&self,
-                                 uart_driver: &MutexGuard<UartDriver>) -> Position {
+    pub fn read_current_position<UartDriver: DrivesUart>(
+        &self,
+        uart_driver: &MutexGuard<UartDriver>,
+    ) -> Position {
         // TODO: Implement this
         Position::zero()
     }

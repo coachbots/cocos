@@ -1,6 +1,5 @@
 /// This module exposes the [ApiError] enum which is used for all api-related
 /// errors.
-
 use zmq;
 
 #[derive(Debug)]
@@ -25,5 +24,5 @@ pub enum ApiError {
     InvalidRequestHead,
     /// Raised when a message is received correctly, but the body could not be
     /// decoded according to the given type.
-    InvalidRequestBody
+    InvalidRequestBody,
 }

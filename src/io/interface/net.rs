@@ -6,5 +6,4 @@ trait BroadcastsData {
     fn send_bytes(data: Vec<u8>);
 }
 
-trait ListensForData {
-}
+trait ListensForData {}

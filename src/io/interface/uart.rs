@@ -1,5 +1,4 @@
-pub enum UartError {
-}
+pub enum UartError {}
 
 pub trait DrivesUart {
     /// Attempts to read a byte from the UART peripheral.

@@ -1,36 +1,36 @@
-use super::{position::Position, motor_power::MotorPower, led_color::LedColor};
+use super::{led_color::LedColor, motor_power::MotorPower, position::Position};
 
 /// Represents data that is fed into the python api.
 pub struct ApiTickInputMessage {
     /// The current bot position emitted to the API.
-    pub bot_pos: Position
+    pub bot_pos: Position,
 }
 
 /// Represents data that the API controller spews out on a tick basis.
 pub struct ApiTickOutputMessage {
     pub request_motor_power: Option<MotorPower>,
-    pub request_led_color: Option<LedColor>
+    pub request_led_color: Option<LedColor>,
 }
 
 impl ApiTickOutputMessage {
     pub fn motor(pow: MotorPower) -> Self {
         Self {
             request_led_color: None,
-            request_motor_power: Some(pow)
+            request_motor_power: Some(pow),
         }
     }
 
     pub fn led(color: LedColor) -> Self {
         Self {
             request_led_color: Some(color),
-            request_motor_power: None
+            request_motor_power: None,
         }
     }
 
     pub fn none() -> Self {
         Self {
             request_led_color: None,
-            request_motor_power: None
+            request_motor_power: None,
         }
     }
 }

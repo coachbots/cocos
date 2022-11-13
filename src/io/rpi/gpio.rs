@@ -1,5 +1,5 @@
-use super::super::interface::gpio::{DrivesGpio, PullMode, GpioError};
-use rppal::gpio::{Gpio, Error};
+use super::super::interface::gpio::{DrivesGpio, GpioError, PullMode};
+use rppal::gpio::{Error, Gpio};
 
 pub struct RpiGpioDriver {
     rpi_driver: Gpio,
@@ -8,37 +8,51 @@ pub struct RpiGpioDriver {
 impl RpiGpioDriver {
     pub fn new() -> Self {
         Self {
-            rpi_driver: Gpio::new().unwrap()
+            rpi_driver: Gpio::new().unwrap(),
         }
     }
 }
 
 impl DrivesGpio for RpiGpioDriver {
-    fn set_inp(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError> {
+    fn set_inp(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError> {
         let pin = self.rpi_driver.get(pin_bcm);
         if pin.is_err() && matches!(pin.err().unwrap(), Error::Io(pin)) {
             return Err(GpioError::IO);
         }
 
-        let p = self.rpi_driver.get(pin_bcm).expect(
-            "Could not retrieve pin {}");
+        let p = self
+            .rpi_driver
+            .get(pin_bcm)
+            .expect("Could not retrieve pin {}");
         match pull_mode {
-            PullMode::Up => { p.into_input_pullup(); }
-            PullMode::Down => { p.into_input_pulldown(); }
-            PullMode::Floating => { p.into_input(); }
+            PullMode::Up => {
+                p.into_input_pullup();
+            }
+            PullMode::Down => {
+                p.into_input_pulldown();
+            }
+            PullMode::Floating => {
+                p.into_input();
+            }
         }
         Ok(())
     }
 
-    fn set_out(&mut self, pin_bcm: u8,
-               pull_mode: PullMode) -> Result<(), GpioError> {
-        let p = self.rpi_driver.get(pin_bcm).expect(
-            "Could not retrieve pin {}");
+    fn set_out(&mut self, pin_bcm: u8, pull_mode: PullMode) -> Result<(), GpioError> {
+        let p = self
+            .rpi_driver
+            .get(pin_bcm)
+            .expect("Could not retrieve pin {}");
         match pull_mode {
-            PullMode::Up => { p.into_output_low(); }
-            PullMode::Down => { p.into_output_high(); }
-            PullMode::Floating => { p.into_output(); }
+            PullMode::Up => {
+                p.into_output_low();
+            }
+            PullMode::Down => {
+                p.into_output_high();
+            }
+            PullMode::Floating => {
+                p.into_output();
+            }
         }
         Ok(())
     }
@@ -49,8 +63,10 @@ impl DrivesGpio for RpiGpioDriver {
             return Err(GpioError::IO);
         }
 
-        let p = self.rpi_driver.get(pin_bcm).expect(
-            "Could not retrieve pin {}");
+        let p = self
+            .rpi_driver
+            .get(pin_bcm)
+            .expect("Could not retrieve pin {}");
         p.into_output().set_high();
         Ok(())
     }
@@ -61,8 +77,10 @@ impl DrivesGpio for RpiGpioDriver {
             return Err(GpioError::IO);
         }
 
-        let p = self.rpi_driver.get(pin_bcm).expect(
-            "Could not retrieve pin {}");
+        let p = self
+            .rpi_driver
+            .get(pin_bcm)
+            .expect("Could not retrieve pin {}");
         p.into_output().set_low();
         Ok(())
     }

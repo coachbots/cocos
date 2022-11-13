@@ -1,6 +1,5 @@
 /// This module defines request types as well as their serialization and
 /// validation functions.
-
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
@@ -22,7 +21,7 @@ pub enum ApiIpcRequestType {
 /// deserialize the body as required.
 pub struct ApiIpcRequest {
     pub request_type: ApiIpcRequestType,
-    pub body: String
+    pub body: String,
 }
 
 /// This trait ensures that ApiIpc*RequestBody functions can be validated.
@@ -34,7 +33,11 @@ pub trait ValidatesApiIpcBody {
 #[derive(Deserialize, Debug)]
 /// Represents a body for the [ApiIpcRequestType.Led] request type. The fields
 /// here contain the RGB values for the LED.
-pub struct ApiIpcLedRequestBody { pub r: u8, pub g: u8, pub b: u8 }
+pub struct ApiIpcLedRequestBody {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
 
 impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
     fn validate(&self) -> bool {
@@ -48,13 +51,15 @@ impl ValidatesApiIpcBody for ApiIpcLedRequestBody {
 #[derive(Deserialize, Debug)]
 /// Represents a velocity request body for [ApiIpcRequestType::Vel]. The
 /// fields represent the left and right motor powers.
-pub struct ApiIpcVelRequestBody { pub l: i8, pub r: i8 }
+pub struct ApiIpcVelRequestBody {
+    pub l: i8,
+    pub r: i8,
+}
 
 impl ValidatesApiIpcBody for ApiIpcVelRequestBody {
     fn validate(&self) -> bool {
         let valid_range = -100..=100;
-        return valid_range.contains(&self.l)
-            && valid_range.contains(&self.r);
+        return valid_range.contains(&self.l) && valid_range.contains(&self.r);
     }
 }
 
@@ -63,5 +68,7 @@ impl ValidatesApiIpcBody for ApiIpcVelRequestBody {
 pub struct ApiIpcPosRequestBody {}
 
 impl ValidatesApiIpcBody for ApiIpcPosRequestBody {
-    fn validate(&self) -> bool { return true; }
+    fn validate(&self) -> bool {
+        return true;
+    }
 }

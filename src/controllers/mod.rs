@@ -1,4 +1,4 @@
-mod interface;
 mod api;
-mod motor;
+mod interface;
 pub mod master;
+mod motor;
