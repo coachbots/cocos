@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Clone, Copy)]
 pub struct LedColor {
     pub r: f32,
@@ -22,5 +24,11 @@ impl LedColor {
             b: 0f32,
             a: 0f32,
         }
+    }
+}
+
+impl Display for LedColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({:.3}, {:.3}, {:.3}, {:.3})", self.r, self.g, self.b, self.a)
     }
 }

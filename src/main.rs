@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::fs::File;
+use std::{fs::File, time::Instant};
 
 use config::APP_CONFIG;
 use controllers::master::MasterController;
@@ -15,11 +15,12 @@ pub mod io;
 pub mod models;
 
 lazy_static! {
+    static ref BEGIN_TIME: Instant = Instant::now();
     static ref MASTER_CONTROLLER: MasterController<PrintGpioDriver, PrintPwmDriver, PrintUartDriver> =
         MasterController::new(
             &APP_CONFIG,
-            PrintGpioDriver::new(File::create("sim_gpio.out").unwrap()),
-            PrintPwmDriver::new(File::create("sim_pwm.out").unwrap()),
+            PrintGpioDriver::new(File::create("sim_gpio.out").unwrap(), *BEGIN_TIME),
+            PrintPwmDriver::new(File::create("sim_gpio.out").unwrap(), *BEGIN_TIME),
             PrintUartDriver::new()
         );
 }

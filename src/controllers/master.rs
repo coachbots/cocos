@@ -110,15 +110,16 @@ impl<
         // Logging task.
         let current_pos = Arc::clone(&self.current_pos);
         let current_mot_pow = Arc::clone(&self.current_mot_pow);
+        let current_led_color = Arc::clone(&self.current_led_color);
         let logging_task = spawn_task(
             move || {
                 // TODO: Potentially dangerous unwrap
                 let pos = current_pos.lock().unwrap().clone();
                 let mot_pow = current_mot_pow.lock().unwrap().clone();
-                log::info!(target: "system.master.position",
-                       "Current position: {}", pos);
-                log::info!(target: "system.master.motor_power",
-                       "Current motor power: {}", mot_pow);
+                let led_color = current_led_color.lock().unwrap().clone();
+                log::info!(target: "system.master.position", "Current: {}", pos);
+                log::info!(target: "system.master.motor_power", "Current: {}", mot_pow);
+                log::info!(target: "system.master.led_color", "Current: {}", led_color)
             },
             Duration::from_millis(100),
             "Logging Task",
@@ -157,6 +158,7 @@ impl<
         let api_controller = Arc::clone(&self.api_controller);
         let current_pos = Arc::clone(&self.current_pos);
         let current_mot_pow = Arc::clone(&self.current_mot_pow);
+        let current_led_color = Arc::clone(&self.current_led_color);
         let api_task = spawn_task(
             move || {
                 let pos = current_pos.lock().unwrap().clone();
@@ -166,7 +168,9 @@ impl<
                         if let Some(mot_pow) = api_output.request_motor_power {
                             *current_mot_pow.lock().unwrap() = mot_pow;
                         }
-                        if let Some(led_col) = api_output.request_led_color {}
+                        if let Some(led_col) = api_output.request_led_color {
+                            *current_led_color.lock().unwrap() = led_col;
+                        }
                     }
                     Err(error) => {
                         // TODO: Handle this case

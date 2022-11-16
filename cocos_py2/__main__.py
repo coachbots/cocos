@@ -34,10 +34,14 @@ class App:
 TEST_SCRIPT = \
 """
 def usr(bot):
+    led_value = 0
     while True:
         current_pos = bot.get_pose()
         bot.set_vel(100, 100)
-        bot.delay()
+        bot.set_led(led_value, led_value, led_value)
+
+        led_value = (led_value + 1) % 101
+        bot.delay(100)
 """
 
 def main():
