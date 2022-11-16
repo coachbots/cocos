@@ -45,11 +45,11 @@ impl DrivesPwm for PrintPwmDriver {
 
                     let time_since_start = Instant::now() - begin_time;
                     let period = 1f32 / frequency.value;
-                    writeln!(file.lock().unwrap(), "{:},1,S,{:},1", time_since_start.as_secs_f64(),
-                             pin_bcm);
+                    writeln!(file.lock().unwrap(), "{:},1,S,{:},1 ; PrintPwmDriver {:}Hz, {:}DC", time_since_start.as_secs_f64(),
+                             pin_bcm, frequency.value, duty_cycle);
                     thread::sleep(Duration::from_secs_f32(duty_cycle * period));
-                    writeln!(file.lock().unwrap(), "{:},1,S,{:},0", time_since_start.as_secs_f64(),
-                             pin_bcm);
+                    writeln!(file.lock().unwrap(), "{:},1,S,{:},0 ; PrintPwmDriver {:}Hz, {:}DC", time_since_start.as_secs_f64(),
+                             pin_bcm, frequency.value, duty_cycle);
                     thread::sleep(Duration::from_secs_f32((1f32 - duty_cycle) * period));
                 }
             });
