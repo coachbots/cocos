@@ -11,7 +11,7 @@ import sys
 
 {user_script}
 
-usr(bot)
+usr(_bot)
 """
 
 class App:
@@ -19,35 +19,26 @@ class App:
         # type: () -> None
         self.run_script = ''  # type: str
 
-    def populate_script(self, script):
-        # type: (str) -> None
-        self.run_script = USER_CODE_TEMPLATE.format(user_script=script)
-        print('Setting script')
+    @staticmethod
+    def format_script(script):
+        # type: (str) -> str
+        return USER_CODE_TEMPLATE.format(user_script=script)
 
     def run(self):
         # type: () -> None
+        # The first argument must be the pipe through which to communicate with
+        # cocos.
         cocos = CocosCommunicator(sys.argv[1])
         cocos.begin()
         coachbot = Coachbot(cocos)
-        exec(self.run_script, { 'bot': coachbot })
+        # Read the user script from stdin. Cocos will inject one.
+        user_script = self.__class__.format_script(sys.stdin.read())
+        exec(user_script, { '_bot': coachbot })
 
-TEST_SCRIPT = \
-"""
-def usr(bot):
-    led_value = 0
-    while True:
-        current_pos = bot.get_pose()
-        bot.set_vel(100, 100)
-        bot.set_led(led_value, led_value, led_value)
-
-        led_value = (led_value + 1) % 101
-        bot.delay(100)
-"""
 
 def main():
     # type: () -> int
     app = App()
-    app.populate_script(TEST_SCRIPT)
     app.run()
     return 0
 

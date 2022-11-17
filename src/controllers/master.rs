@@ -207,4 +207,11 @@ impl<
         self.init();
         self.spawn_tasks();
     }
+
+    pub fn run_with_script(&mut self, script: String) {
+        let mut api_controller = self.api_controller.lock().unwrap();
+        api_controller.kill();
+        api_controller.set_script(script.as_bytes().to_vec());
+        self.run();
+    }
 }
