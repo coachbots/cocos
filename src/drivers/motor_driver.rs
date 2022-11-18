@@ -1,6 +1,8 @@
+use uom::si::{f32::Frequency, frequency::hertz};
+
 use crate::io::interface::{
     gpio::{DrivesGpio, PullMode},
-    IOError,
+    IOError, pwm::DrivesPwm,
 };
 
 pub enum MotorDirection {
@@ -14,8 +16,10 @@ pub enum MotorError {
 
 #[derive(Clone, Copy)]
 pub struct MotorDescriptor {
-    pub pin_left_bcm: u8,
-    pub pin_right_bcm: u8,
+    pub pin_in1: u8,
+    pub pin_in2: u8,
+    pub pin_pwm: u8,
+    pub pin_stdby: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -35,13 +39,16 @@ impl MotorDriver {
     /// It is left to the implementation to decide whether the motor will be
     /// halted upon this function call.
     pub fn unblock(&self, gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
-        let l_out = gpio_driver.clear(self.descriptor.pin_left_bcm);
-        if l_out.is_err() {
+        if gpio_driver.clear(self.descriptor.pin_in1).is_err() {
             return Err(MotorError::IOError);
         }
 
-        let r_out = gpio_driver.clear(self.descriptor.pin_right_bcm);
-        if r_out.is_err() {
+        if gpio_driver.clear(self.descriptor.pin_in2).is_err() {
+            return Err(MotorError::IOError);
+        }
+
+        // TODO: Figure out if this should clear or set.
+        if gpio_driver.clear(self.descriptor.pin_stdby).is_err() {
             return Err(MotorError::IOError);
         }
 
@@ -53,13 +60,16 @@ impl MotorDriver {
     /// This function must immediately halt the motor and block it from further
     /// operation.
     pub fn block(&self, gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
-        let l_out = gpio_driver.set(self.descriptor.pin_left_bcm);
-        if l_out.is_err() {
+        if gpio_driver.set(self.descriptor.pin_in1).is_err() {
             return Err(MotorError::IOError);
         }
 
-        let r_out = gpio_driver.set(self.descriptor.pin_right_bcm);
-        if r_out.is_err() {
+        if gpio_driver.set(self.descriptor.pin_in2).is_err() {
+            return Err(MotorError::IOError);
+        }
+
+        // TODO: Set or clear?
+        if gpio_driver.set(self.descriptor.pin_stdby).is_err() {
             return Err(MotorError::IOError);
         }
 
@@ -72,8 +82,10 @@ impl MotorDriver {
     ///
     /// * `percent` - The percentage speed of the motor. Value must be between
     ///               0 and 1.
-    pub fn set_speed(&self, percent: f32) -> Result<(), MotorError> {
-        // TODO: Implement with PWM driver
+    pub fn set_speed(&self, percent: f32,
+                     pwm_driver: &mut impl DrivesPwm) -> Result<(), MotorError> {
+        pwm_driver.set_freq_dc(Frequency::new::<hertz>(600f32),
+                               percent, self.descriptor.pin_pwm);
         Ok(())
     }
 
@@ -89,24 +101,20 @@ impl MotorDriver {
     ) -> Result<(), MotorError> {
         match direction {
             MotorDirection::CounterClockwise => {
-                let l_out = gpio_driver.set(self.descriptor.pin_left_bcm);
-                if l_out.is_err() {
+                if gpio_driver.set(self.descriptor.pin_in1).is_err() {
                     return Err(MotorError::IOError);
                 }
 
-                let r_out = gpio_driver.clear(self.descriptor.pin_right_bcm);
-                if r_out.is_err() {
+                if gpio_driver.clear(self.descriptor.pin_in2).is_err() {
                     return Err(MotorError::IOError);
                 }
             }
             MotorDirection::Clockwise => {
-                let l_out = gpio_driver.set(self.descriptor.pin_right_bcm);
-                if l_out.is_err() {
+                if gpio_driver.set(self.descriptor.pin_in1).is_err() {
                     return Err(MotorError::IOError);
                 }
 
-                let r_out = gpio_driver.clear(self.descriptor.pin_left_bcm);
-                if r_out.is_err() {
+                if gpio_driver.clear(self.descriptor.pin_in2).is_err() {
                     return Err(MotorError::IOError);
                 }
             }
@@ -115,13 +123,15 @@ impl MotorDriver {
     }
 
     pub fn init(&self, gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorError> {
-        let l_out = gpio_driver.set_out(self.descriptor.pin_left_bcm, PullMode::Down);
-        if l_out.is_err() {
-            return Err(MotorError::IOError);
-        }
-
-        let r_out = gpio_driver.set_out(self.descriptor.pin_right_bcm, PullMode::Down);
-        if r_out.is_err() {
+        if gpio_driver.set_out(self.descriptor.pin_in1, PullMode::Down).is_err()
+            || gpio_driver.set_out(self.descriptor.pin_in2, PullMode::Down).is_err()
+            || gpio_driver.set_out(self.descriptor.pin_pwm, PullMode::Down).is_err()
+            || gpio_driver.set_out(self.descriptor.pin_stdby, PullMode::Down).is_err()
+            || gpio_driver.clear(self.descriptor.pin_in1).is_err()
+            || gpio_driver.clear(self.descriptor.pin_in2).is_err()
+            || gpio_driver.clear(self.descriptor.pin_pwm).is_err()
+            || gpio_driver.clear(self.descriptor.pin_stdby).is_err()
+        {
             return Err(MotorError::IOError);
         }
 

@@ -1,11 +1,6 @@
-use rppal::gpio::Gpio;
-
 use crate::{
-    drivers::{
-        led_driver,
-        motor_driver::{MotorDescriptor, MotorDirection, MotorDriver, MotorError},
-    },
-    io::interface::gpio::DrivesGpio,
+    drivers::motor_driver::{MotorDescriptor, MotorDirection, MotorDriver},
+    io::interface::{gpio::DrivesGpio, pwm::DrivesPwm},
     models::motor_power::{MotorPower, MotorPowerQuadrant},
 };
 
@@ -42,7 +37,9 @@ impl MotorController {
         Ok(())
     }
 
-    pub fn unblock(&self, gpio_driver: &mut impl DrivesGpio) -> Result<(), MotorControllerError> {
+    pub fn unblock(&self,
+                   gpio_driver: &mut impl DrivesGpio,
+                   pwm_dirver: &mut impl DrivesPwm) -> Result<(), MotorControllerError> {
         let l = self.left_motor_driver.unblock(gpio_driver);
         if l.is_err() {
             return Err(MotorControllerError::IOError);
@@ -60,12 +57,13 @@ impl MotorController {
         &self,
         vel: MotorPower,
         gpio_driver: &mut impl DrivesGpio,
+        pwm_driver: &mut impl DrivesPwm
     ) -> Result<(), MotorControllerError> {
         if vel.is_locked() {
             return self.block(gpio_driver);
         }
 
-        if let Err(err) = self.unblock(gpio_driver) {
+        if let Err(err) = self.unblock(gpio_driver, pwm_driver) {
             return Err(err);
         }
 
@@ -128,10 +126,10 @@ impl MotorController {
             }
         }
 
-        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_left()) {
+        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_left(), pwm_driver) {
             return Err(MotorControllerError::IOError);
         };
-        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_right()) {
+        if let Err(err) = self.left_motor_driver.set_speed(vel.pow_right(), pwm_driver) {
             return Err(MotorControllerError::IOError);
         };
 

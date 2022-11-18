@@ -19,12 +19,16 @@ pub struct AppConfig {
 lazy_static! {
     pub static ref APP_CONFIG: AppConfig = AppConfig {
         mot_left: MotorDescriptor {
-            pin_left_bcm: 3u8,
-            pin_right_bcm: 4u8
+            pin_in1: 35u8,
+            pin_in2: 36u8,
+            pin_pwm: 37u8,
+            pin_stdby: 38u8
         },
         mot_right: MotorDescriptor {
-            pin_left_bcm: 3u8,
-            pin_right_bcm: 4u8
+            pin_in1: 29u8,
+            pin_in2: 31u8,
+            pin_pwm: 32u8,
+            pin_stdby: 38u8
         },
         led: LedDescriptor {
             pin_r_bcm: 22,

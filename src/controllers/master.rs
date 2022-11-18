@@ -185,11 +185,13 @@ impl<
         let motor_controller = self.motor_controller; // TODO: Should be ref
         let current_mot_pow = Arc::clone(&self.current_mot_pow);
         let gpio_driver = Arc::clone(&self.gpio_driver);
+        let pwm_driver = Arc::clone(&self.pwm_driver);
         spawn_task(
             move || {
                 let mut gpio = gpio_driver.lock().unwrap();
+                let mut pwm = pwm_driver.lock().unwrap();
                 let mot_pow = current_mot_pow.lock().unwrap();
-                motor_controller.set_vel(*mot_pow, &mut *gpio);
+                motor_controller.set_vel(*mot_pow, &mut *gpio, &mut *pwm);
             },
             Duration::from_millis(10),
             "Motion Output Task",
