@@ -11,9 +11,6 @@ pub struct AppConfig {
     pub mot_right: MotorDescriptor,
     pub nucifera: NuciferaDescriptor,
     pub led: LedDescriptor,
-
-    /// Determines the maximum motor power update rate in milliseconds.
-    pub drive_update_period: Duration,
 }
 
 lazy_static! {
@@ -31,9 +28,9 @@ lazy_static! {
             pin_stdby: 38u8
         },
         led: LedDescriptor {
-            pin_r_bcm: 22,
-            pin_g_bcm: 23,
-            pin_b_bcm: 24,
+            pin_r_bcm: 15u8,
+            pin_g_bcm: 16u8,
+            pin_b_bcm: 18u8,
             frequency: Frequency::new::<hertz>(120f32)
         },
         nucifera: NuciferaDescriptor {
@@ -41,7 +38,5 @@ lazy_static! {
             pin_uart_rx_bcm: 15u8,
             baud_rate: 19200u16
         },
-
-        drive_update_period: Duration::from_millis(8) // 125Hz
     };
 }

@@ -1,0 +1,18 @@
+name: "Create Release Build"
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ATiltedTree/setup-rust@v1.0.5
+        with:
+          rust-version: stable
+          targets: armv7-unknown-linux-gnueabihf
+
+      - name: Install Arm GCC Tools
+        run: sudo apt-get install -y gcc-arm*
