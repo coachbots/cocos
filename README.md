@@ -23,22 +23,19 @@ It is very likely that you are running an `x86_64` machine so you will need to
 cross-compile for the rpi. In order to do that, you need to fetch some
 dependencies first:
 ```bash
-rustup target add armv7-unknown-linux-gnueabihf
-sudo apt-get install build-essential
-sudo apt-get install g++-arm-linux-gnueabihf
-sudo apt-get install gdb-multiarch
+cargo install cross
 ```
 
 When you have all the dependencies, running
 ```bash
-RUSTFLAGS="-C linker=arm-linux-gnueabihf-gcc" cargo build --bin cocos_rpi \
-    --target=armv7-unknown-linux-gnueabihf --release
+cross build --bin cocos_rpi --target=armv7-unknown-linux-gnueabihf --release
 ```
 
 should compile `cocos_rpi`. Find it in
 `target/armv7-unknown-linux-gnueabihf/release`. Simply copy paste that onto the
-coachbot and you should be good to go! There are no dynamic dependencies and
-running the singular file will get `cocos_rpi` running!
+coachbot and you should be good to go! There are no dynamic dependencies
+(except `libc`, but that's nothing to worry about) and running the singular
+file will get `cocos_rpi` running!
 
 ## Design Decisions
 
