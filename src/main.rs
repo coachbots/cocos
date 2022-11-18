@@ -26,25 +26,35 @@ struct CliArgs {
     ///
     /// cocos -u=my_user_script.py # Loads my_user_script.py as the user script.
     #[arg(short, long)]
-    user_script: Option<String>
+    user_script: Option<String>,
+
+    /// Defines the GPIO IO communication file. Used exclusively with the SIL.
+    #[arg(short, long)]
+    gpio_file: String
 }
 
 lazy_static! {
     static ref BEGIN_TIME: Instant = Instant::now();
-    static ref MASTER_CONTROLLER: MasterController<PrintGpioDriver, PrintPwmDriver, PrintUartDriver> =
-        MasterController::new(
-            &APP_CONFIG,
-            PrintGpioDriver::new(File::create("sim_gpio.out").unwrap(), *BEGIN_TIME),
-            PrintPwmDriver::new(File::create("sim_gpio.out").unwrap(), *BEGIN_TIME),
-            PrintUartDriver::new()
-        );
 }
 
 fn main() {
     let args = CliArgs::parse();
+
     env_logger::init();
+
+    // TODO: Yikes, remove this... Killing the point of rust...
+    let gpio_file1 = File::create(String::clone(&args.gpio_file)).unwrap();
+    let gpio_file2 = File::create(args.gpio_file).unwrap();
+
+    let master_controller = MasterController::new(
+        &APP_CONFIG,
+        PrintGpioDriver::new(gpio_file1, *BEGIN_TIME),
+        PrintPwmDriver::new(gpio_file2, *BEGIN_TIME),
+        PrintUartDriver::new()
+    );
+
     match args.user_script {
-        None => { (*MASTER_CONTROLLER).run() },
+        None => { master_controller.run() },
         Some(script) => {
             let mut user_script = String::new();
             if script == String::from("--") {
