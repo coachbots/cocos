@@ -1,0 +1,6 @@
+97.790154562,1,S,19,1 ; PrintGpioDriver
+99.108055841,1,S,16,1 ; PrintGpioDriver
+100.0950321,1,S,20,0 ; PrintGpioDriver
+107.752297725,1,S,5,1 ; PrintGpioDriver
+107.75244985,1,S,6,1 ; PrintGpioDriver
+107.752515444,1,S,20,0 ; PrintGpioDriver
