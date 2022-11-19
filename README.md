@@ -32,10 +32,10 @@ cross build --bin cocos_rpi --target=armv7-unknown-linux-gnueabihf --release
 ```
 
 should compile `cocos_rpi`. Find it in
-`target/armv7-unknown-linux-gnueabihf/release`. Simply copy paste that onto the
-coachbot and you should be good to go! There are no dynamic dependencies
-(except `libc`, but that's nothing to worry about) and running the singular
-file will get `cocos_rpi` running!
+`target/armv7-unknown-linux-gnueabihf/release` (on your local machine). Simply
+copy paste that onto the coachbot (probably via `scp`) and you should be good
+to go! There are no dynamic dependencies (except `libc`, but that's nothing to
+worry about) and running the singular file will get `cocos_rpi` running!
 
 ## Design Decisions
 
