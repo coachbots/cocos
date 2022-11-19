@@ -2,7 +2,7 @@ use uom::si::{f32::Frequency, frequency::hertz};
 
 use crate::io::interface::{
     gpio::{DrivesGpio, PullMode},
-    IOError, pwm::DrivesPwm,
+    pwm::DrivesPwm,
 };
 
 pub enum MotorDirection {
@@ -82,9 +82,11 @@ impl MotorDriver {
     ///               0 and 1.
     pub fn set_speed(&self, percent: f32,
                      pwm_driver: &mut impl DrivesPwm) -> Result<(), MotorError> {
-        pwm_driver.set_freq_dc(Frequency::new::<hertz>(600f32),
-                               percent, self.descriptor.pin_pwm);
-        Ok(())
+        match pwm_driver.set_freq_dc(Frequency::new::<hertz>(600f32),
+                                     percent, self.descriptor.pin_pwm) {
+            Err(_) => Err(MotorError::IOError),
+            Ok(()) => Ok(())
+        }
     }
 
     /// Sets the direction of the motor.
