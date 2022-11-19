@@ -1,10 +1,11 @@
-use std::time::Duration;
-
 use uom::si::{f32::Frequency, frequency::hertz};
 
 use crate::drivers::{
-    led_driver::LedDescriptor, motor_driver::MotorDescriptor, nucifera_driver::NuciferaDescriptor,
+    led_driver::LedDescriptor,
+    motor_driver::MotorDescriptor,
+    nucifera_driver::NuciferaDescriptor,
 };
+use crate::io::interface::uart::UartParity;
 
 pub struct AppConfig {
     pub mot_left: MotorDescriptor,
@@ -34,9 +35,10 @@ lazy_static! {
             frequency: Frequency::new::<hertz>(120f32)
         },
         nucifera: NuciferaDescriptor {
-            pin_uart_tx_bcm: 14u8,
-            pin_uart_rx_bcm: 15u8,
-            baud_rate: 19200u16
+            baud_rate: 19200u32,
+            parity: UartParity::Even,
+            data_bits: 8,
+            stop_bits: 1
         },
     };
 }

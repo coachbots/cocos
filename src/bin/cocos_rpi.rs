@@ -11,7 +11,7 @@ fn main() {
         &APP_CONFIG,
         RpiGpioDriver::new(),
         RpiPwmDriver::new(),
-        RpiUartDriver::new()
+        RpiUartDriver::new(APP_CONFIG.nucifera.to_uart_descriptor())
     );
 
     master_controller.run();

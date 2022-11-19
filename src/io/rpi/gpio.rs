@@ -31,9 +31,6 @@ impl DrivesGpio for RpiGpioDriver {
             PullMode::Down => {
                 p.into_input_pulldown();
             }
-            PullMode::Floating => {
-                p.into_input();
-            }
         }
         Ok(())
     }
@@ -49,9 +46,6 @@ impl DrivesGpio for RpiGpioDriver {
             }
             PullMode::Down => {
                 p.into_output_high();
-            }
-            PullMode::Floating => {
-                p.into_output();
             }
         }
         Ok(())

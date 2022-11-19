@@ -1,30 +1,39 @@
+use rppal::uart::{Uart, Parity};
+use crate::io::interface::uart::{UartDescriptor, UartParity};
+use queues::CircularBuffer;
+
 use super::super::interface::uart::{DrivesUart, UartError};
 
-#[derive(Copy, Clone)]
-pub struct RpiUartDriver {}
-
-impl RpiUartDriver {
-    pub fn new() -> Self {
-        Self {}
+impl UartParity {
+    fn to_rppal(&self) -> Parity {
+        match self {
+            UartParity::None => Parity::None,
+            Even => Parity::Even,
+            Odd => Parity::Odd,
+            Mark => Parity::Mark,
+            Space => Parity::Space
+        }
     }
 }
 
-impl RpiUartDriver {}
+pub struct RpiUartDriver {
+    rpi_driver: Uart,
+    rx_buffer: CircularBuffer<u8>
+}
+
+impl RpiUartDriver {
+    pub fn new(uart_descriptor: UartDescriptor) -> Self {
+        Self {
+            rpi_driver: Uart::new(uart_descriptor.baud_rate, uart_descriptor.parity.to_rppal(),
+                                  uart_descriptor.data_bits, uart_descriptor.stop_bits).expect(
+                                      "Could not initialize the rppal Uart driver"),
+            rx_buffer: CircularBuffer::<u8>::new(1024)
+        }
+    }
+}
 
 impl DrivesUart for RpiUartDriver {
-    fn read_byte(&self) -> Result<u8, UartError> {
-        panic!("Not implemented") // TODO
-    }
-
-    fn write_byte(&self, value: u8) -> Result<(), UartError> {
-        panic!("Not implemented") // TODO
-    }
-
-    fn write_bytes(&self, value: &[u8]) -> Result<(), UartError> {
-        panic!("Not implemented") // TODO
-    }
-
-    fn read_bytes(&self, count: usize) -> Result<Box<[u8]>, UartError> {
+    fn read_bytes(&mut self, into: &mut [u8]) -> Result<Box<[u8]>, UartError> {
         panic!("Not implemented") // TODO
     }
 }
