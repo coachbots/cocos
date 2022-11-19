@@ -24,7 +24,7 @@ fn main() {
     env_logger::init();
     let args = CliArgs::parse();
 
-    let master_controller = MasterController::new(
+    let mut master_controller = MasterController::new(
         &APP_CONFIG,
         RpiGpioDriver::new(),
         RpiPwmDriver::new(),
@@ -51,6 +51,7 @@ fn main() {
                     }
                 }
             }
+            master_controller.run_with_script(user_script)
         }
     }
 

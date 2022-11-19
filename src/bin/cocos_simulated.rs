@@ -39,7 +39,7 @@ fn main() {
     let gpio_file1 = File::create(String::clone(&args.gpio_file)).unwrap();
     let gpio_file2 = File::create(args.gpio_file).unwrap();
 
-    let master_controller = MasterController::new(
+    let mut master_controller = MasterController::new(
         &APP_CONFIG,
         PrintGpioDriver::new(gpio_file1, *BEGIN_TIME),
         PrintPwmDriver::new(gpio_file2, *BEGIN_TIME),
@@ -66,6 +66,7 @@ fn main() {
                     }
                 }
             }
+            master_controller.run_with_script(user_script)
         }
     }
 }
