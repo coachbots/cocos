@@ -1,8 +1,6 @@
 name: "Create Release Build"
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  push
 
 jobs:
   gradle:
@@ -13,6 +11,8 @@ jobs:
         with:
           rust-version: stable
           targets: armv7-unknown-linux-gnueabihf
+      - name: Install build dependencies
+        run: cargo install cross
 
-      - name: Install Arm GCC Tools
-        run: sudo apt-get install -y gcc-arm*
+      - name: Compile
+        run: cross build --bin cocos_rpi --release --target=armv7-unknown-linux-gnueabihf
