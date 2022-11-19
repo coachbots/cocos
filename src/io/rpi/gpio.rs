@@ -23,7 +23,7 @@ impl DrivesGpio for RpiGpioDriver {
         let p = self
             .rpi_driver
             .get(pin_bcm)
-            .expect("Could not retrieve pin {}");
+            .expect("Could not retrieve pin");
         match pull_mode {
             PullMode::Up => {
                 p.into_input_pullup();
@@ -42,7 +42,7 @@ impl DrivesGpio for RpiGpioDriver {
         let p = self
             .rpi_driver
             .get(pin_bcm)
-            .expect("Could not retrieve pin {}");
+            .expect("Could not retrieve pin");
         match pull_mode {
             PullMode::Up => {
                 p.into_output_low();
@@ -66,7 +66,7 @@ impl DrivesGpio for RpiGpioDriver {
         let p = self
             .rpi_driver
             .get(pin_bcm)
-            .expect("Could not retrieve pin {}");
+            .expect("Could not retrieve pin");
         p.into_output().set_high();
         Ok(())
     }
@@ -80,7 +80,7 @@ impl DrivesGpio for RpiGpioDriver {
         let p = self
             .rpi_driver
             .get(pin_bcm)
-            .expect("Could not retrieve pin {}");
+            .expect("Could not retrieve pin");
         p.into_output().set_low();
         Ok(())
     }

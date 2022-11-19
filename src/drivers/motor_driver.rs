@@ -47,8 +47,7 @@ impl MotorDriver {
             return Err(MotorError::IOError);
         }
 
-        // TODO: Figure out if this should clear or set.
-        if gpio_driver.clear(self.descriptor.pin_stdby).is_err() {
+        if gpio_driver.set(self.descriptor.pin_stdby).is_err() {
             return Err(MotorError::IOError);
         }
 
@@ -68,8 +67,7 @@ impl MotorDriver {
             return Err(MotorError::IOError);
         }
 
-        // TODO: Set or clear?
-        if gpio_driver.set(self.descriptor.pin_stdby).is_err() {
+        if gpio_driver.clear(self.descriptor.pin_stdby).is_err() {
             return Err(MotorError::IOError);
         }
 
@@ -101,11 +99,11 @@ impl MotorDriver {
     ) -> Result<(), MotorError> {
         match direction {
             MotorDirection::CounterClockwise => {
-                if gpio_driver.set(self.descriptor.pin_in1).is_err() {
+                if gpio_driver.clear(self.descriptor.pin_in1).is_err() {
                     return Err(MotorError::IOError);
                 }
 
-                if gpio_driver.clear(self.descriptor.pin_in2).is_err() {
+                if gpio_driver.set(self.descriptor.pin_in2).is_err() {
                     return Err(MotorError::IOError);
                 }
             }
