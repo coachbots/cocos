@@ -19,7 +19,7 @@ use crate::models::api::{ApiTickInputMessage, ApiTickOutputMessage};
 /// child process.
 pub struct ApiController {
     running_process: Option<Arc<Mutex<Popen>>>,
-    api_messager: Mutex<ApiMessager>,
+    api_messager: ApiMessager,
     script: Vec<u8>,
 }
 
@@ -28,7 +28,7 @@ impl ApiController {
     pub fn new(comm_uri: &'static str) -> ApiController {
         ApiController {
             running_process: Option::None,
-            api_messager: Mutex::new(ApiMessager::new(comm_uri)),
+            api_messager: ApiMessager::new(comm_uri),
             script: vec![],
         }
     }
@@ -51,7 +51,7 @@ impl ApiController {
         data: ApiTickInputMessage,
     ) -> Result<ApiTickOutputMessage, ApiError> {
         // TODO: Dangerous unwrap
-        self.api_messager.lock().unwrap().run_tick(data)
+        self.api_messager.run_tick(data)
     }
 
     /// Restarts the API process. Can be called to initally start the process.
@@ -60,17 +60,15 @@ impl ApiController {
         if kill_err.is_err() {
             return Err(kill_err.unwrap_err());
         }
-        let mut messager = self.api_messager.lock().unwrap();
-
         let api_proc = Popen::create(
-            &["python2", "-m", "cocos_py2", messager.comm_file],
+            &["python2", "-m", "cocos_py2", self.api_messager.comm_file],
             PopenConfig {
                 stdin: Redirection::Pipe,
                 detached: true,
                 ..Default::default()
             },
         );
-
+        
         if api_proc.is_err() {
             return Err(ApiError::ProcessError);
         }
@@ -83,33 +81,23 @@ impl ApiController {
             Some(proc_rc) => {
                 let proc_arc = proc_rc.clone();
                 let mut proc = proc_arc.lock().unwrap();
-                match &mut proc.stdin {
-                    None => {
+                if let Some(mut stdin) = proc.stdin.take() {
+                    if stdin.write_all(&self.script).is_err() {
                         return Err(ApiError::IO);
-                    }
-                    Some(stdin) => {
-                        if stdin.write_all(self.script.borrow()).is_err() {
-                            return Err(ApiError::IO);
-                        }
                     }
                 }
             }
         }
 
-        match messager.start() {
-            Ok(()) => {}
-            Err(err) => {
-                return Err(err);
-            }
+        match self.api_messager.start() {
+            Ok(()) => Ok(()),
+            Err(err) => Err(err)
         }
-
-        Ok(())
     }
 
     /// Kills the child process and cleans up resources.
     pub fn kill(&mut self) -> Result<(), ApiError> {
-        let messager = &mut self.api_messager.lock().unwrap();
-        messager.stop();
+        self.api_messager.stop();
 
         // Kill the process of whose Popen we hold. Note that a malicious actor
         // could hook into SIGTERM and prevent us from shutting down, so we

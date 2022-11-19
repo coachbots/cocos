@@ -90,7 +90,7 @@ impl ApiMessager {
             None => Err(ApiError::SockNotReady),
             Some(sock) => {
                 // Receive the message, raising an error if an error ocurred.
-                let message_res = sock.recv_msg(0);
+                let message_res = sock.recv_msg(0); // TODO Should not block
                 if let Err(err) = message_res {
                     return Err(ApiError::ZMQError(err));
                 }

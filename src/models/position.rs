@@ -5,7 +5,7 @@ use uom::si::angle::radian;
 use uom::si::f32::{Angle, Length};
 use uom::si::length::meter;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 /// This sturcture defines a position which encodes the XY position of a
 /// coachbot, as well as the angle it is facing in 2 dimensions.
 ///

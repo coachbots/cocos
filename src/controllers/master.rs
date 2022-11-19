@@ -1,7 +1,7 @@
 use log;
 use std::{
-    sync::{Arc, Mutex},
-    thread::{self, JoinHandle},
+    sync::{Arc, Mutex, RwLock},
+    thread::{self, JoinHandle, sleep},
     time::{Duration, SystemTime},
 };
 
@@ -11,7 +11,7 @@ use crate::{
     io::interface::{gpio::DrivesGpio, pwm::DrivesPwm, uart::DrivesUart},
     models::{
         api::ApiTickInputMessage, led_color::LedColor, motor_power::MotorPower, position::Position,
-    },
+    }, controllers::api,
 };
 
 use super::{api::ApiController, motor::MotorController};
@@ -47,15 +47,14 @@ pub struct MasterController<
     nucifera_driver: NuciferaDriver,
 
     motor_controller: MotorController,
-    // TODO: Does not need to be a mutex
-    api_controller: Arc<Mutex<ApiController>>,
+    api_controller: ApiController,
 
     // TODO: Does not need to be an ARC
-    current_pos: Arc<Mutex<Position>>,
+    current_pos: Arc<RwLock<Position>>,
     // TODO: Does not need to be an ARC
-    current_mot_pow: Arc<Mutex<MotorPower>>,
+    current_mot_pow: Arc<RwLock<MotorPower>>,
     // TODO: Does not need to be an ARC
-    current_led_color: Arc<Mutex<LedColor>>,
+    current_led_color: Arc<RwLock<LedColor>>,
 }
 
 impl<
@@ -76,18 +75,18 @@ impl<
             uart_driver: Arc::new(Mutex::new(uart_driver)),
             led_driver: LedDriver::new(app_cfg.led),
 
-            api_controller: Arc::new(Mutex::new(ApiController::new("ipc:///tmp/cocos-api"))),
+            api_controller: ApiController::new("ipc:///tmp/cocos-api"),
 
             nucifera_driver: NuciferaDriver::new(app_cfg.nucifera),
             motor_controller: MotorController::new(app_cfg.mot_left, app_cfg.mot_right),
 
-            current_pos: Arc::new(Mutex::new(Position::zero())),
-            current_mot_pow: Arc::new(Mutex::new(MotorPower::zero())),
-            current_led_color: Arc::new(Mutex::new(LedColor::off())),
+            current_pos: Arc::new(RwLock::new(Position::zero())),
+            current_mot_pow: Arc::new(RwLock::new(MotorPower::zero())),
+            current_led_color: Arc::new(RwLock::new(LedColor::off())),
         }
     }
 
-    fn init(&self) {
+    fn init(&mut self) {
         let gpio_driver_rc = self.gpio_driver.clone();
         let mut gpio_driver = gpio_driver_rc.lock().unwrap();
 
@@ -95,16 +94,12 @@ impl<
             .block(&mut *gpio_driver)
             .expect("Could not block the motor controller on start.");
 
-        self.api_controller
-            .lock()
-            .unwrap()
-            .restart_api()
-            .expect("Could not spawn the child process.");
+        self.api_controller.restart_api().expect("Could not spawn the child process.");
 
         log::debug!(target: "system.master", "Successfully initialized");
     }
 
-    fn spawn_tasks(&self) {
+    fn spawn_tasks(&mut self) {
         // Channel definitions.
 
         // Logging task.
@@ -114,9 +109,9 @@ impl<
         let logging_task = spawn_task(
             move || {
                 // TODO: Potentially dangerous unwrap
-                let pos = current_pos.lock().unwrap().clone();
-                let mot_pow = current_mot_pow.lock().unwrap().clone();
-                let led_color = current_led_color.lock().unwrap().clone();
+                let pos = current_pos.read().unwrap().clone();
+                let mot_pow = current_mot_pow.read().unwrap().clone();
+                let led_color = current_led_color.read().unwrap().clone();
                 log::info!(target: "system.master.position", "Current: {}", pos);
                 log::info!(target: "system.master.motor_power", "Current: {}", mot_pow);
                 log::info!(target: "system.master.led_color", "Current: {}", led_color)
@@ -134,7 +129,7 @@ impl<
                 let uart_driver = pos_uart_driver.lock().unwrap();
                 let new_pos = nucifera_driver.read_current_position(&uart_driver);
                 // TODO: Potentially dangerous unwrap
-                *current_pos.lock().unwrap() = new_pos;
+                *current_pos.write().unwrap() = new_pos;
             },
             Duration::from_millis(1),
             "Position Input Task",
@@ -144,42 +139,41 @@ impl<
         let current_led_color = Arc::clone(&self.current_led_color);
         let pwm_driver = Arc::clone(&self.pwm_driver);
         let led_controller = self.led_driver; // TODO: Should be ref
-        let led_task = spawn_task(
-            move || {
-                let mut pwm = pwm_driver.lock().unwrap();
-                let led = current_led_color.lock().unwrap();
-                led_controller.set_color(*led, &mut *pwm);
-            },
-            Duration::from_millis(10),
-            "LED Task",
-        );
+        let led_task = spawn_task(move || {
+            let mut pwm = pwm_driver.lock().unwrap();
+            let led = current_led_color.read().unwrap();
+            led_controller.set_color(*led, &mut *pwm);
+        }, Duration::from_millis(10), "LED Task",);
 
         // API Task
-        let api_controller = Arc::clone(&self.api_controller);
         let current_pos = Arc::clone(&self.current_pos);
         let current_mot_pow = Arc::clone(&self.current_mot_pow);
         let current_led_color = Arc::clone(&self.current_led_color);
-        let api_task = spawn_task(
-            move || {
-                let pos = current_pos.lock().unwrap().clone();
-                let tick_data = ApiTickInputMessage { bot_pos: pos };
-                match api_controller.lock().unwrap().run_tick(tick_data) {
-                    Ok(api_output) => {
-                        if let Some(mot_pow) = api_output.request_motor_power {
-                            *current_mot_pow.lock().unwrap() = mot_pow;
+        let api_controller = &mut self.api_controller;
+        thread::scope(|s| {
+            s.spawn(move || {
+                loop {
+                    let pos = current_pos.read().unwrap().clone();
+                    let tick_data = ApiTickInputMessage { bot_pos: pos };
+                    match api_controller.run_tick(tick_data) {
+                        Ok(api_data) => {
+                            log::debug!("{:?}", api_data);
+                            if let Some(mot_pow) = api_data.request_motor_power {
+                                *current_mot_pow.write().unwrap() = mot_pow;
+                            }
+                            if let Some(led_color) = api_data.request_led_color {
+                                *current_led_color.write().unwrap() = led_color;
+                            }
                         }
-                        if let Some(led_col) = api_output.request_led_color {
-                            *current_led_color.lock().unwrap() = led_col;
+                        Err(err) => {
+                            log::error!(target: "system.master.api", "Received error: {:?}", err);
                         }
                     }
-                    Err(error) => {
-                        // TODO: Handle this case
-                    }
-                };
-            },
-            Duration::from_millis(1),
-            "API Task",
-        );
+
+                    thread::sleep(Duration::from_millis(5));
+                }
+            });
+        });
 
         // Driving Task
         let motor_controller = self.motor_controller; // TODO: Should be ref
@@ -190,7 +184,7 @@ impl<
             move || {
                 let mut gpio = gpio_driver.lock().unwrap();
                 let mut pwm = pwm_driver.lock().unwrap();
-                let mot_pow = current_mot_pow.lock().unwrap();
+                let mot_pow = current_mot_pow.read().unwrap();
                 motor_controller.set_vel(*mot_pow, &mut *gpio, &mut *pwm);
             },
             Duration::from_millis(10),
@@ -205,15 +199,14 @@ impl<
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         self.init();
         self.spawn_tasks();
     }
 
     pub fn run_with_script(&mut self, script: String) {
-        let mut api_controller = self.api_controller.lock().unwrap();
-        api_controller.kill();
-        api_controller.set_script(script.as_bytes().to_vec());
+        self.api_controller.kill();
+        self.api_controller.set_script(script.as_bytes().to_vec());
         self.run();
     }
 }

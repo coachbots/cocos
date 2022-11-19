@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 /// Represents a motor power that can be delivered to the wheels.
 ///
 /// TODO: This should be renamed to be WheelsPower or something along the lines

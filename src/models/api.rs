@@ -1,11 +1,13 @@
 use super::{led_color::LedColor, motor_power::MotorPower, position::Position};
 
+#[derive(Debug)]
 /// Represents data that is fed into the python api.
 pub struct ApiTickInputMessage {
     /// The current bot position emitted to the API.
     pub bot_pos: Position,
 }
 
+#[derive(Debug)]
 /// Represents data that the API controller spews out on a tick basis.
 pub struct ApiTickOutputMessage {
     pub request_motor_power: Option<MotorPower>,
