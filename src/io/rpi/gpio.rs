@@ -1,10 +1,11 @@
 use super::super::interface::gpio::{DrivesGpio, GpioError, PullMode};
-use rppal::gpio::{Error, Gpio};
+use rppal::gpio::Gpio;
 
 pub struct RpiGpioDriver {
     rpi_driver: Gpio,
 }
 
+/// Defines a driver that interfaces with the Raspberry Pi GPIO Pins on Linux
 impl RpiGpioDriver {
     pub fn new() -> Self { Self { rpi_driver: Gpio::new().unwrap(), } }
 }

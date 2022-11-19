@@ -32,9 +32,8 @@ lazy_static! {
 }
 
 fn main() {
-    let args = CliArgs::parse();
-
     env_logger::init();
+    let args = CliArgs::parse();
 
     // TODO: Yikes, remove this... Killing the point of rust...
     let gpio_file1 = File::create(String::clone(&args.gpio_file)).unwrap();
